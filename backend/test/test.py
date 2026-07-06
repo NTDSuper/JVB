@@ -1,127 +1,83 @@
-import os
+"""
+Test Dashboard Pipeline with keyboard input.
+
+Usage:
+    python backend/test/test.py
+
+Type your question and see the dashboard output.
+Type 'exit' or 'quit' to stop.
+"""
+
 import json
-from dotenv import load_dotenv
+import sys
+import os
 
-from langchain_nvidia_ai_endpoints import ChatNVIDIA
-from langchain_community.utilities import SQLDatabase
-from langchain_community.agent_toolkits import create_sql_agent
+# Add backend root to path so imports work
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from test_planner import planner_parser
-from fomatter import formatter_parser
+from dashboard.pipeline import dashboard_pipeline
 
-load_dotenv()
 
-# ==========================
-# LLM
-# ==========================
+def main():
+    print("=" * 60)
+    print("  DASHBOARD TEST — Keyboard Input")
+    print("=" * 60)
+    print()
+    print("Enter a question to generate a dashboard.")
+    print("Examples:")
+    print("  - Show monthly revenue")
+    print("  - Top 5 products by sales")
+    print("  - Revenue per product in June")
+    print("  - General report")
+    print("  - Customer order statistics")
+    print()
+    print("Type 'exit' or 'quit' to stop.")
+    print()
 
-llm = ChatNVIDIA(
-    model="qwen/qwen3.5-397b-a17b",
-    api_key="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",
-    temperature=0.6,
-)
+    while True:
+        try:
+            question = input(">>> ").strip()
+        except (EOFError, KeyboardInterrupt):
+            print("\nGoodbye!")
+            break
 
-# ==========================
-# Database
-# ==========================
+        if not question:
+            continue
 
-db = SQLDatabase.from_uri(
-    os.getenv("DATABASE_URL")
-)
+        if question.lower() in ("exit", "quit"):
+            print("Goodbye!")
+            break
 
-sql_agent = create_sql_agent(
-    llm=llm,
-    db=db,
-    agent_type="tool-calling",
-    verbose=True,
-)
+        print()
+        print("─" * 60)
+        print(f"Question: {question}")
+        print("─" * 60)
+        print()
 
-# ==========================
-# User Question
-# ==========================
+        try:
+            result = dashboard_pipeline(question)
 
-question = "Show monthly revenue"
+            print()
+            print("=" * 60)
+            print("  DASHBOARD OUTPUT")
+            print("=" * 60)
+            print()
 
-# ==========================
-# Planner
-# ==========================
+            print(
+                json.dumps(
+                    result,
+                    indent=2,
+                    ensure_ascii=False,
+                )
+            )
 
-planner_prompt = f"""
-{planner_parser.get_format_instructions()}
+            print()
+            print(f"→ {len(result)} widget(s) generated")
+            print()
 
-User Question:
-{question}
-"""
+        except Exception as e:
+            print(f"\n❌ Error: {e}\n", file=sys.stderr)
 
-planner_response = llm.invoke(planner_prompt)
 
-tasks = planner_parser.parse(
-    planner_response.content
-).root
-
-dashboard_results = []
-
-# ==========================
-# Execute Tasks
-# ==========================
-
-for task in tasks:
-
-    print("=" * 50)
-    print(task)
-
-    # ----------------------
-    # SQL Agent
-    # ----------------------
-
-    sql_result = sql_agent.invoke(
-        {
-            "input": task.question
-        }
-    )
-
-    print(sql_result)
-
-    # output của SQL Agent
-    sql_output = sql_result["output"]
-    
-    # ----------------------
-    # Formatter
-    # ----------------------
-
-    formatter_prompt = f"""
-{formatter_parser.get_format_instructions()}
-
-Display:
-{task.display}
-
-Chart Type:
-{task.chart_type}
-
-Database Result:
-{sql_output}
-"""
-
-    formatter_response = llm.invoke(formatter_prompt)
-
-    dashboard = formatter_parser.parse(
-        formatter_response.content
-    )
-
-    dashboard_results.append(
-        dashboard.model_dump()
-    )
-
-# ==========================
-# Final Result
-# ==========================
-
-print("\n========== DASHBOARD ==========\n")
-
-print(
-    json.dumps(
-        dashboard_results,
-        indent=2,
-        ensure_ascii=False
-    )
-)
+if __name__ == "__main__":
+    main()
