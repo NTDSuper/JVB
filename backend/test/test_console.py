@@ -1,11 +1,40 @@
 import os
 import json
 from dotenv import load_dotenv
-
+from langchain_core.output_parsers import PydanticOutputParser
 from langchain_nvidia_ai_endpoints import ChatNVIDIA
 from langchain_community.utilities import SQLDatabase
 from langchain_community.agent_toolkits import create_sql_agent
 
+from typing import List, Literal
+from pydantic import BaseModel, Field
+
+
+class AgentTask(BaseModel):
+    tool: Literal["sql"] = Field(
+        description="Tool used to execute the task."
+    )
+
+    display: Literal["table", "chart", "kpi"] = Field(
+        description="Frontend display type."
+    )
+
+    chart_type: Literal["bar", "line", "pie", "none"] = Field(
+        description="Chart type. Use 'none' if display is not chart."
+    )
+
+    question: str = Field(
+        description="Natural language question or SQL query request."
+    )
+
+
+class AgentPlan(BaseModel):
+    tasks: List[AgentTask]
+
+parser = PydanticOutputParser(
+    pydantic_object=AgentPlan
+)
+#======================================================    
 load_dotenv()
 
 # ======================================================
@@ -21,28 +50,27 @@ MODEL = "qwen/qwen3.5-397b-a17b"
 # ======================================================
 
 planner_llm = ChatNVIDIA(
-  model="deepseek-ai/deepseek-v4-pro",
-  api_key="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",
-  temperature=1,
+  model="qwen/qwen3.5-397b-a17b",
+  api_key="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",
+  temperature=0.6,
   top_p=0.95,
-  max_tokens=16384,
+  max_completion_tokens=16384,
 )
 
 sql_llm = ChatNVIDIA(
-  model="deepseek-ai/deepseek-v4-pro",
-  api_key="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",
-  temperature=1,
+  model="qwen/qwen3.5-397b-a17b",
+  api_key="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",
+  temperature=0.6,
   top_p=0.95,
-  max_tokens=16384,
+  max_completion_tokens=16384,
 )
 
 formatter_llm = ChatNVIDIA(
-  model="deepseek-ai/deepseek-v4-pro",
-  api_key="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",
-  temperature=1,
+  model="qwen/qwen3.5-397b-a17b",
+  api_key="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",
+  temperature=0.6,
   top_p=0.95,
-  max_tokens=16384,
-
+  max_completion_tokens=16384,
 )
 
 # ======================================================
@@ -81,12 +109,17 @@ Return ONLY valid JSON.
 
 Schema:
 
-{{
+[{{
     "tool":"sql",
     "display":"table|chart|kpi",
     "chart_type":"bar|line|pie|none",
     "question":"database query"
-}}
+}},{{
+    "tool":"sql",
+    "display":"table|chart|kpi",
+    "chart_type":"bar|line|pie|none",
+    "question":"database query"
+}}]
 
 User:
 
@@ -126,7 +159,7 @@ Return ONLY JSON.
 
 Schema:
 
-{{
+[{{
     "summary":"",
 
     "display":"",
@@ -140,7 +173,21 @@ Schema:
             "datasets":[]
         }}
     }}
-}}
+}},{{
+    "summary":"",
+
+    "display":"",
+
+    "table":[],
+
+    "chart":{{
+        "type":"",
+        "data":{{
+            "labels":[],
+            "datasets":[]
+        }}
+    }}
+}} ]
 
 Display:
 
@@ -160,6 +207,12 @@ SQL Result:
 """
 
     response = formatter_llm.invoke(prompt)
+
+    print("========== RESPONSE ==========")
+    print(type(response))
+    print("========== CONTENT ==========")
+    print(repr(response.content))
+    print("=============================")
 
     return json.loads(response.content)
 
@@ -204,7 +257,7 @@ def dashboard_pipeline(question):
 
 if __name__ == "__main__":
 
-    question = "Show trendy products in June"
+    question = "Show revenue per products in June"
 
     result = dashboard_pipeline(question)
 

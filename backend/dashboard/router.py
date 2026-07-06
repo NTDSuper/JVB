@@ -1,11 +1,14 @@
-import json
+"""
+Dashboard API Router.
+"""
+
 import logging
 from typing import Any, Dict, List
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
-from ai.dashboard_agent import dashboard_pipeline
+from .pipeline import dashboard_pipeline
 
 logger = logging.getLogger(__name__)
 

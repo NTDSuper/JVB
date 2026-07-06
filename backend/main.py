@@ -6,7 +6,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from core.logging_config import *
 from database import Base, engine
 import models
-from routers import auth, user, product, cart, order, payment, attribute, chat, dashboard
+from routers import auth, user, product, cart, order, payment, attribute, chat
+from dashboard.router import router as dashboard_router
 from utils.redis_client import redis_client
 
 app = FastAPI()
@@ -52,8 +53,9 @@ logger.info("Payment router loaded")
 app.include_router(attribute.router)
 logger.info("Attribute router loaded")
 
-app.include_router(dashboard.router)
+app.include_router(dashboard_router)
 logger.info("Dashboard router loaded")
+
 @app.get("/redis-test")
 def test():
     logger.info("Redis test")
