@@ -23,6 +23,7 @@ DATABASE_URL = os.getenv(
 
 def create_agent(llm):
     """Create a singleton SQL agent."""
+    print(f"Creating SQL agent with database URL: {DATABASE_URL}")
     db = SQLDatabase.from_uri(DATABASE_URL)
 
     agent = create_sql_agent(

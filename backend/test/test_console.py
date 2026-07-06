@@ -41,9 +41,6 @@ load_dotenv()
 # Config
 # ======================================================
 
-API_KEY = "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"
-
-MODEL = "qwen/qwen3.5-397b-a17b"
 
 # ======================================================
 # LLMs
@@ -51,7 +48,7 @@ MODEL = "qwen/qwen3.5-397b-a17b"
 
 planner_llm = ChatNVIDIA(
   model="qwen/qwen3.5-397b-a17b",
-  api_key="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",
+  api_key=os.getenv("NVIDIA_API_KEY"),
   temperature=0.6,
   top_p=0.95,
   max_completion_tokens=16384,
@@ -59,7 +56,7 @@ planner_llm = ChatNVIDIA(
 
 sql_llm = ChatNVIDIA(
   model="qwen/qwen3.5-397b-a17b",
-  api_key="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",
+  api_key=os.getenv("NVIDIA_API_KEY"),
   temperature=0.6,
   top_p=0.95,
   max_completion_tokens=16384,
@@ -67,7 +64,7 @@ sql_llm = ChatNVIDIA(
 
 formatter_llm = ChatNVIDIA(
   model="qwen/qwen3.5-397b-a17b",
-  api_key="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",
+  api_key=os.getenv("NVIDIA_API_KEY"),
   temperature=0.6,
   top_p=0.95,
   max_completion_tokens=16384,
@@ -78,7 +75,7 @@ formatter_llm = ChatNVIDIA(
 # ======================================================
 
 db = SQLDatabase.from_uri(
-    "mysql+pymysql://root:123456@localhost:3307/mydb"
+    os.getenv("DATABASE_URL")
 )
 
 # ======================================================

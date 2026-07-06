@@ -20,7 +20,7 @@ from dashboard.pipeline import dashboard_pipeline
 
 def main():
     print("=" * 60)
-    print("  DASHBOARD TEST — Keyboard Input")
+    print("  DASHBOARD TEST - Keyboard Input")
     print("=" * 60)
     print()
     print("Enter a question to generate a dashboard.")
@@ -49,9 +49,9 @@ def main():
             break
 
         print()
-        print("─" * 60)
+        print("-" * 60)
         print(f"Question: {question}")
-        print("─" * 60)
+        print("-" * 60)
         print()
 
         try:
@@ -72,11 +72,11 @@ def main():
             )
 
             print()
-            print(f"→ {len(result)} widget(s) generated")
+            print(f"=> {len(result)} widget(s) generated")
             print()
 
         except Exception as e:
-            print(f"\n❌ Error: {e}\n", file=sys.stderr)
+            print(f"\n[ERROR] {e}\n", file=sys.stderr)
 
 
 if __name__ == "__main__":

@@ -4,6 +4,7 @@ Dashboard Pipeline: Orchestrates Planner → SQL Agent → Formatter.
 
 import logging
 import os
+from pathlib import Path
 from typing import Any, Dict, List
 
 from dotenv import load_dotenv
@@ -13,17 +14,18 @@ from .formatter import run_formatter
 from .planner import run_planner
 from .sql_agent import create_agent, run_sql_agent
 
-load_dotenv()
+# Load .env from backend/ directory
+env_path = Path(__file__).resolve().parent.parent / ".env"
+load_dotenv(dotenv_path=env_path)
 
 logger = logging.getLogger(__name__)
 
 # ── LLM Configuration ────────────────────────────────────────────────────────
 
-API_KEY = os.getenv(
-    "NVIDIA_API_KEY",
-    "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",
-)
+API_KEY = os.getenv("NVIDIA_API_KEY")
 MODEL = "qwen/qwen3.5-397b-a17b"
+
+logger.info(f"Model: {MODEL}")
 
 llm = ChatNVIDIA(
     model=MODEL,

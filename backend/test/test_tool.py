@@ -1,3 +1,5 @@
+import os
+
 from dotenv import load_dotenv
 import json
 
@@ -12,7 +14,7 @@ load_dotenv()
 # ==========================
 planner = ChatNVIDIA(
   model="qwen/qwen3.5-397b-a17b",
-  api_key="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",
+  api_key=os.getenv("NVIDIA_API_KEY"),
   temperature=0.6,
   top_p=0.95,
   max_completion_tokens=16384,
@@ -23,7 +25,7 @@ planner = ChatNVIDIA(
 # ==========================
 sql_llm = ChatNVIDIA(
   model="qwen/qwen3.5-397b-a17b",
-  api_key="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",
+  api_key=os.getenv("NVIDIA_API_KEY"),
   temperature=0.6,
   top_p=0.95,
   max_completion_tokens=16384,
@@ -31,7 +33,7 @@ sql_llm = ChatNVIDIA(
 
 formatter_llm = ChatNVIDIA(
   model="qwen/qwen3.5-397b-a17b",
-  api_key="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",
+  api_key=os.getenv("NVIDIA_API_KEY"),
   temperature=0.6,
   top_p=0.95,
   max_completion_tokens=16384,

@@ -1,3 +1,5 @@
+import os
+
 from dotenv import load_dotenv
 
 from langchain_nvidia_ai_endpoints import ChatNVIDIA
@@ -11,7 +13,7 @@ load_dotenv()
 # =========================
 planner_llm = ChatNVIDIA(
   model="qwen/qwen3.5-397b-a17b",
-  api_key="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",
+  api_key=os.getenv("NVIDIA_API_KEY"),
   temperature=0.6,
   top_p=0.95,
   max_completion_tokens=16384,
@@ -22,7 +24,7 @@ planner_llm = ChatNVIDIA(
 # =========================
 sql_llm = ChatNVIDIA(
   model="qwen/qwen3.5-397b-a17b",
-  api_key="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",
+  api_key=os.getenv("NVIDIA_API_KEY"),
   temperature=0.6,
   top_p=0.95,
   max_completion_tokens=16384,
@@ -32,7 +34,7 @@ sql_llm = ChatNVIDIA(
 # Database
 # =========================
 db = SQLDatabase.from_uri(
-    "mysql+pymysql://root:123456@localhost:3307/mydb"
+    os.getenv("DATABASE_URL")
 )
 
 # =========================

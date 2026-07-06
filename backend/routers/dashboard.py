@@ -8,7 +8,7 @@ from typing import Any, Dict, List
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
-from .pipeline import dashboard_pipeline
+from dashboard.pipeline import dashboard_pipeline
 
 logger = logging.getLogger(__name__)
 
