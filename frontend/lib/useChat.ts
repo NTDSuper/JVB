@@ -24,7 +24,7 @@ export function useChat(sessionId: string) {
   const isRefreshingRef = useRef(false);
   const pendingMessageRef = useRef<string | null>(null);
   const apiBase =
-    (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000").replace(
+    ("http://localhost:8000").replace(
       /^http/,
       "ws"
     );

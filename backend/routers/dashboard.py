@@ -2,13 +2,17 @@
 Dashboard API Router.
 """
 
+import json
 import logging
-from typing import Any, Dict, List
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
-
-from dashboard.pipeline import dashboard_pipeline
+from typing import Any
+from models.users_model import User
+from routers.auth import get_current_user, get_permission_codes
+from services.dashboard_service import DashboardService
+from dashboard.schemas import QueryAnalysis
 
 logger = logging.getLogger(__name__)
 
@@ -22,14 +26,56 @@ class DashboardRequest(BaseModel):
     question: str
 
 
-class DashboardResponse(BaseModel):
+class AnalyzeRequest(BaseModel):
+    question: str
+
+
+class AnalyzeResponse(BaseModel):
     success: bool
-    data: List[Dict[str, Any]]
+    data: QueryAnalysis | None = None
     error: str | None = None
 
 
+class DashboardResponse(BaseModel):
+    success: bool
+    data: list[dict[str, Any]]
+    error: str | None = None
+
+
+@router.post("/analyze", response_model=AnalyzeResponse)
+async def analyze_question(req: AnalyzeRequest, current_user: User = Depends(get_current_user)):
+    """
+    Analyze a natural language question and suggest enhancements.
+
+    Returns:
+      - clear: whether the question is actionable as-is
+      - reason: explanation
+      - options: 2-5 suggested enhancements with selectable options
+    """
+    try:
+        logger.info(f"Analyze request: {req.question}")
+        analysis = DashboardService.analyze_question(req.question)
+
+        return AnalyzeResponse(
+            success=True,
+            data=analysis,
+        )
+
+    except HTTPException as e:
+        return AnalyzeResponse(
+            success=False,
+            error=e.detail,
+        )
+    except Exception as e:
+        logger.exception(f"Analyze failed: {e}")
+        return AnalyzeResponse(
+            success=False,
+            error=str(e),
+        )
+
+
 @router.post("/", response_model=DashboardResponse)
-async def create_dashboard(req: DashboardRequest):
+async def create_dashboard(req: DashboardRequest, current_user: User = Depends(get_current_user)):
     """
     Create a dashboard from a natural language question.
 
@@ -40,19 +86,22 @@ async def create_dashboard(req: DashboardRequest):
 
     Returns a list of dashboard widgets (table, chart, kpi).
     """
-    if not req.question or not req.question.strip():
-        raise HTTPException(status_code=400, detail="Question is required")
-
+    
     try:
         logger.info(f"Dashboard request: {req.question}")
-
-        result = dashboard_pipeline(req.question)
+        result = DashboardService.create_dashboard(req.question)
 
         return DashboardResponse(
             success=True,
             data=result,
         )
 
+    except HTTPException as e:
+        return DashboardResponse(
+            success=False,
+            data=[],
+            error=e.detail,
+        )
     except Exception as e:
         logger.exception(f"Dashboard pipeline failed: {e}")
         return DashboardResponse(
@@ -60,3 +109,39 @@ async def create_dashboard(req: DashboardRequest):
             data=[],
             error=str(e),
         )
+
+
+@router.post("/stream")
+async def create_dashboard_stream(req: DashboardRequest, current_user: User = Depends(get_current_user)):
+    """
+    Streaming dashboard endpoint using Server-Sent Events (SSE).
+
+    Each SSE event corresponds to one completed widget, so the frontend
+    can display results incrementally without waiting for all tasks.
+
+    Event types:
+      - plan:    { "type": "plan", "total": N }
+      - widget:  { "type": "widget", "index": i, "total": N, "widget": {...} }
+      - error:   { "type": "error", "index": i, "total": N, "widget": {...} }
+      - done:    { "type": "done" }
+    """
+    logger.info(f"Dashboard stream request: {req.question}")
+
+    def event_generator():
+        try:
+            for event in DashboardService.stream_dashboard(req.question):
+                yield event
+        except Exception as e:
+            logger.exception(f"Dashboard stream failed: {e}")
+            yield f"data: {json.dumps({'type': 'error', 'widget': {'summary': f'Pipeline error: {str(e)}', 'display': 'table', 'table': [], 'chart': None}})}\n\n"
+            yield f"data: {json.dumps({'type': 'done'})}\n\n"
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )

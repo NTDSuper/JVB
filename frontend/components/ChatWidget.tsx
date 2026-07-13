@@ -41,6 +41,8 @@ export default function ChatWidget() {
   const bottomRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
+  console.log("ChatWidget render", { messages, status, isSending });
+
   // Auto-scroll khi có tin nhắn mới
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -50,6 +52,29 @@ export default function ChatWidget() {
   useEffect(() => {
     if (open) setTimeout(() => textareaRef.current?.focus(), 120);
   }, [open]);
+
+  // Chuyển đổi content an toàn về string, tránh hiển thị "[object Object]"
+  const formatContent = (content: unknown): string => {
+    if (typeof content === "string") return content;
+    if (content === null || content === undefined) return "";
+    if (typeof content === "object") {
+      // Nếu là object, thử lấy text từ các field phổ biến
+      const obj = content as Record<string, unknown>;
+      if (obj.text && typeof obj.text === "string") return obj.text;
+      if (obj.content && typeof obj.content === "string") return obj.content;
+      // Nếu là array, join các phần
+      if (Array.isArray(content)) {
+        return content.map((item) => formatContent(item)).join("\n");
+      }
+      // Fallback: JSON stringify
+      try {
+        return JSON.stringify(content);
+      } catch {
+        return String(content);
+      }
+    }
+    return String(content);
+  };
 
   const handleSend = () => {
     if (!input.trim()) return;
@@ -150,10 +175,10 @@ export default function ChatWidget() {
                 <div className="chat-msg-avatar" aria-hidden="true">AI</div>
               )}
               <div className="chat-msg-bubble">
-                {msg.content.split("\n").map((line, i) => (
+                {formatContent(msg.content).split("\n").map((line, i) => (
                   <span key={i}>
                     {line}
-                    {i < msg.content.split("\n").length - 1 && <br />}
+                    {i < formatContent(msg.content).split("\n").length - 1 && <br />}
                   </span>
                 ))}
                 <span className="chat-msg-time">

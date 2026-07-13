@@ -17,6 +17,7 @@ const NAV_LINKS = [
   { href: "/cart", label: "Cart", showBadge: true },
   { href: "/orders", label: "Orders" },
   { href: "/dashboard", label: "Manager", roles: ["manager", "admin"] },
+  { href: "/ai-dashboard", label: "AI Dashboard", roles: ["manager"] },
   { href: "/admin", label: "Admin", roles: ["admin"] },
   { href: "/profile", label: "Profile" },
 ] as const;

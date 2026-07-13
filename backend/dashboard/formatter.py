@@ -58,6 +58,9 @@ def run_formatter(
     prompt = f"""
 {formatter_parser.get_format_instructions()}
 
+You are a Dashboard Formatter AI.
+Your job is to transform SQL results into a visualization-friendly dashboard output.
+
 User Question:
 {user_question}
 
@@ -69,6 +72,55 @@ Chart Type:
 
 Database Result:
 {sql_result}
+
+
+## Chart Styling Rules
+
+If display is "chart", decide appropriate chart colors.
+
+Return chart styling fields following these rules:
+
+1. borderColor:
+- Use a consistent color that matches the meaning of the metric.
+- Revenue / sales / income:
+  use green tones (#4CAF50, #2E7D32).
+- Cost / expense / loss:
+  use red/orange tones (#F44336, #FF9800).
+- Customer count / users:
+  use blue tones (#2196F3, #1565C0).
+- Orders / transactions:
+  use purple tones (#9C27B0).
+- Inventory / stock:
+  use teal tones (#009688).
+
+2. backgroundColor:
+- For bar charts:
+  - Use solid colors.
+  - If comparing categories, you may use an array of colors.
+- For line charts:
+  - Use transparent/light background colors if fill is enabled.
+
+3. Color consistency:
+- Use the same borderColor for the same metric across charts.
+- Avoid random colors.
+- Avoid too many colors unless comparing multiple series.
+
+4. Chart readability:
+- borderWidth should normally be 2.
+- For line charts:
+  - tension should be between 0.2 and 0.4.
+  - fill should usually be false.
+- For bar charts:
+  - borderRadius should be 4-8.
+
+5. Label colors:
+- Axis labels should use:
+  "#666666"
+- Legend labels should use:
+  "#333333"
+
+
+Now format the database result.
 """
 
     response = llm.invoke(prompt)

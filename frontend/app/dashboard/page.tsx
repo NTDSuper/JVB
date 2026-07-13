@@ -214,15 +214,6 @@ export default function DashboardPage() {
           />
         </div>
 
-        <div style={{ marginBottom: 18 }}>
-          {isLoading ? (
-            <div className="card">
-              <div className="skeleton" style={{ height: 320 }} />
-            </div>
-          ) : (
-            <Chart products={products} />
-          )}
-        </div>
 
         {isLoading ? (
           <div className="card">

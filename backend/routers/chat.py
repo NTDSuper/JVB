@@ -11,6 +11,8 @@ from sqlalchemy.orm import Session
 from ai.chat import chat
 from database import SessionLocal
 from models.users_model import User
+from routers.auth import get_current_user
+from services.auth_service import AuthService
 from utils.jwt_handler import decode_token
 from utils.redis_client import redis_client
 
@@ -32,7 +34,7 @@ class ChatResponse(BaseModel):
 
 
 # ── Hàm xác thực JWT dùng chung ─────────────────────────────────────────────
-def _authenticate_token(token: str, db: Session) -> User:
+async def _authenticate_token(token: str, db: Session) -> User:
     try:
         payload = decode_token(token)
     except JWTError:
@@ -110,7 +112,7 @@ async def chat_ws(
     # 2. Xác thực token sau khi đã accept
     db: Session = SessionLocal()
     try:
-        _authenticate_token(token, db)
+        user = await _authenticate_token(token, db)
     except ValueError as e:
         logger.warning(f"WebSocket auth failed session={session_id}: {e}")
         await manager.send_personal_message({"type": "error", "content": str(e)}, websocket)
