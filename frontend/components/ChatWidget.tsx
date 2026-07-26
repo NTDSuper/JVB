@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useChat } from "@/lib/useChat";
 import "./ChatWidget.css";
 
@@ -17,10 +18,10 @@ function getOrCreateSessionId(): string {
 }
 
 const STATUS_LABELS: Record<string, string> = {
-  open: "Đã kết nối",
-  connecting: "Đang kết nối...",
-  closed: "Mất kết nối",
-  error: "Lỗi kết nối",
+  open: "Connected",
+  connecting: "Connecting...",
+  closed: "Disconnected",
+  error: "Connection Error",
 };
 
 const STATUS_DOT: Record<string, string> = {
@@ -31,6 +32,7 @@ const STATUS_DOT: Record<string, string> = {
 };
 
 export default function ChatWidget() {
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [input, setInput] = useState("");
   const sessionId = useRef(getOrCreateSessionId()).current;
@@ -40,6 +42,7 @@ export default function ChatWidget() {
 
   const bottomRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const messagesRef = useRef<HTMLDivElement>(null);
 
   console.log("ChatWidget render", { messages, status, isSending });
 
@@ -53,20 +56,38 @@ export default function ChatWidget() {
     if (open) setTimeout(() => textareaRef.current?.focus(), 120);
   }, [open]);
 
+  // Native DOM click handler for product links (works with dangerouslySetInnerHTML)
+  useEffect(() => {
+    const el = messagesRef.current;
+    if (!el) return;
+
+    const handleClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      const link = target.closest("a");
+      if (link && link.getAttribute("href")?.startsWith("/products/")) {
+        e.preventDefault();
+        setOpen(false);
+        const href = link.getAttribute("href")!;
+        // Use setTimeout to avoid React batching issues
+        setTimeout(() => router.push(href), 0);
+      }
+    };
+
+    el.addEventListener("click", handleClick);
+    return () => el.removeEventListener("click", handleClick);
+  }, [router]);
+
   // Chuyển đổi content an toàn về string, tránh hiển thị "[object Object]"
   const formatContent = (content: unknown): string => {
     if (typeof content === "string") return content;
     if (content === null || content === undefined) return "";
     if (typeof content === "object") {
-      // Nếu là object, thử lấy text từ các field phổ biến
       const obj = content as Record<string, unknown>;
       if (obj.text && typeof obj.text === "string") return obj.text;
       if (obj.content && typeof obj.content === "string") return obj.content;
-      // Nếu là array, join các phần
       if (Array.isArray(content)) {
         return content.map((item) => formatContent(item)).join("\n");
       }
-      // Fallback: JSON stringify
       try {
         return JSON.stringify(content);
       } catch {
@@ -93,11 +114,12 @@ export default function ChatWidget() {
     <>
       {/* Floating button */}
       <button
+        suppressHydrationWarning
         id="chat-widget-toggle"
         className={`chat-fab${open ? " chat-fab--active" : ""}`}
         onClick={() => setOpen((v) => !v)}
-        aria-label={open ? "Đóng chat" : "Mở chat AI"}
-        title="Chat với AI"
+        aria-label={open ? "Close chat" : "Open AI chat"}
+        title="Chat with AI"
       >
         {open ? (
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
@@ -143,10 +165,11 @@ export default function ChatWidget() {
             </div>
           </div>
           <button
+            suppressHydrationWarning
             className="chat-header-btn"
             onClick={clearMessages}
-            title="Xóa lịch sử"
-            aria-label="Xóa lịch sử chat"
+            title="Clear history"
+            aria-label="Clear chat history"
           >
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <polyline points="3 6 5 6 21 6" />
@@ -157,12 +180,12 @@ export default function ChatWidget() {
         </div>
 
         {/* Messages */}
-        <div className="chat-messages" id="chat-messages-list">
+        <div className="chat-messages" id="chat-messages-list" ref={messagesRef}>
           {messages.length === 0 && (
             <div className="chat-empty">
               <div className="chat-empty-icon">🛒</div>
-              <p>Xin chào! Tôi là AI của SuperMart.</p>
-              <p>Hỏi tôi về sản phẩm, giá cả hoặc so sánh hàng hoá nhé!</p>
+              <p>Hello! I am the AI assistant for SuperMart.</p>
+              <p>Ask me about products, prices, or compare items!</p>
             </div>
           )}
 
@@ -175,12 +198,21 @@ export default function ChatWidget() {
                 <div className="chat-msg-avatar" aria-hidden="true">AI</div>
               )}
               <div className="chat-msg-bubble">
-                {formatContent(msg.content).split("\n").map((line, i) => (
-                  <span key={i}>
-                    {line}
-                    {i < formatContent(msg.content).split("\n").length - 1 && <br />}
-                  </span>
-                ))}
+                {msg.role === "ai" ? (
+                  <span dangerouslySetInnerHTML={{
+                    __html: formatContent(msg.content)
+                      .split("\n")
+                      .map(line => line.trim() ? line : "<br>")
+                      .join("<br>")
+                  }} />
+                ) : (
+                  formatContent(msg.content).split("\n").map((line, i) => (
+                    <span key={i}>
+                      {line}
+                      {i < formatContent(msg.content).split("\n").length - 1 && <br />}
+                    </span>
+                  ))
+                )}
                 <span className="chat-msg-time">
                   {msg.timestamp.toLocaleTimeString("vi-VN", {
                     hour: "2-digit",
@@ -215,18 +247,19 @@ export default function ChatWidget() {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Nhập tin nhắn... (Enter để gửi)"
+            placeholder="Enter message... (Press Enter to send)"
             rows={1}
             disabled={isSending || status === "connecting"}
-            aria-label="Nhập tin nhắn"
+            aria-label="Enter message"
           />
           <button
+            suppressHydrationWarning
             id="chat-send-btn"
             className="chat-send-btn"
             onClick={handleSend}
             disabled={!input.trim() || isSending || status === "connecting"}
-            aria-label="Gửi tin nhắn"
-            title="Gửi (Enter)"
+            aria-label="Send message"
+            title="Send (Enter)"
           >
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
               <line x1="22" y1="2" x2="11" y2="13" />

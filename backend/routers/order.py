@@ -1,6 +1,6 @@
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
 
 from database import get_db
@@ -11,6 +11,7 @@ from schemas.order_schema import (
     OrderItemResponse,
     OrderResponse,
     OrderListResponse,
+    OrderListPaginatedResponse,
 )
 from services.order_service import OrderService
 
@@ -37,6 +38,21 @@ def get_orders(
     return OrderService.get_orders(current_user, db, skip, limit)
 
 
+@router.get("/all", response_model=OrderListPaginatedResponse)
+def get_all_orders(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+    skip: int = Query(0, ge=0, description="Number of records to skip"),
+    limit: int = Query(20, ge=1, le=100, description="Max records per page"),
+    status: str = Query(None, description="Filter by order status: pending, in_progress, completed, cancelled"),
+):
+    """
+    Manager/Admin: Lấy danh sách tất cả đơn hàng.
+    Hỗ trợ phân trang (skip, limit) và lọc theo trạng thái (status).
+    """
+    return OrderService.get_all_orders(current_user, db, skip, limit, status)
+
+
 @router.get("/{order_id}", response_model=OrderResponse)
 def get_order(
     order_id: int,
@@ -52,4 +68,31 @@ def cancel_order(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    """User hủy đơn hàng (chỉ khi đang PENDING, chưa thanh toán)."""
     return OrderService.cancel_order(order_id, current_user, db)
+
+
+@router.post("/{order_id}/confirm", response_model=OrderResponse)
+def confirm_order(
+    order_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Manager/Admin xác nhận hoàn thành đơn hàng.
+    Chuyển IN_PROGRESS -> COMPLETED.
+    """
+    return OrderService.admin_confirm_order(order_id, current_user, db)
+
+
+@router.post("/{order_id}/admin-cancel", response_model=OrderResponse)
+def admin_cancel_order(
+    order_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Manager/Admin hủy đơn hàng.
+    Chuyển IN_PROGRESS -> CANCELLED, hoàn lại tồn kho, payment -> refund.
+    """
+    return OrderService.admin_cancel_order(order_id, current_user, db)

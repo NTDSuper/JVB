@@ -22,19 +22,21 @@ from schemas.product_schema import (
     CategoryResponse,
 )
 from services.auth_service import AuthService
+from services.s3_services import S3Service
 
 logger = logging.getLogger(__name__)
 
+s3_service = S3Service()
 
 def _generate_slug(name: str) -> str:
     """Convert a name to a URL-friendly slug."""
     # Remove accents/diacritics
-    text = unicodedata.normalize('NFKD', name).encode('ascii', 'ignore').decode('ascii')
+    text = unicodedata.normalize("NFKD", name).encode("ascii", "ignore").decode("ascii")
     # Lowercase, replace spaces with hyphens, remove non-alphanumeric
     text = text.lower()
-    text = re.sub(r'[^a-z0-9\s-]', '', text)
-    text = re.sub(r'[\s-]+', '-', text)
-    return text.strip('-')
+    text = re.sub(r"[^a-z0-9\s-]", "", text)
+    text = re.sub(r"[\s-]+", "-", text)
+    return text.strip("-")
 
 
 class ProductService:
@@ -128,7 +130,9 @@ class ProductService:
         ).delete()
 
         # Thêm mới
-        validated = ProductService._validate_and_map_attributes(product.category_id, attribute_inputs, db)
+        validated = ProductService._validate_and_map_attributes(
+            product.category_id, attribute_inputs, db
+        )
         for attr, value in validated:
             pav = ProductAttributeValue(
                 product_id=product.id,
@@ -155,10 +159,14 @@ class ProductService:
             )
 
         base = ProductResponse.model_validate(product).model_dump(mode="json")
+        if product.image_url:
+            base["image_url"] = s3_service.generate_presigned_get_url(
+                product.image_url
+            )
+        else:
+            base["image_url"] = None
         base["attributes"] = attrs
-        base["category_name"] = (
-            product.category.name if product.category else None
-        )
+        base["category_name"] = product.category.name if product.category else None
         return base
 
     @staticmethod
@@ -170,7 +178,10 @@ class ProductService:
     def create_product(payload: ProductCreate, current_user: User, db: Session) -> dict:
         """Create a new product."""
         if "product:create" not in AuthService.get_permission_codes(current_user):
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Permission denied: 'product:create' required.")
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Permission denied: 'product:create' required.",
+            )
 
         exist = db.query(Product).filter(Product.sku == payload.sku).first()
         if exist:
@@ -178,13 +189,20 @@ class ProductService:
 
         # Validate category tồn tại nếu có category_id
         if payload.category_id:
-            category = db.query(Category).filter(Category.id == payload.category_id).first()
+            category = (
+                db.query(Category).filter(Category.id == payload.category_id).first()
+            )
             if not category:
-                raise HTTPException(status_code=400, detail=f"Category id={payload.category_id} not found")
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Category id={payload.category_id} not found",
+                )
 
         # Validate attributes nếu có (dùng name thay vì id)
         if payload.attributes and payload.category_id:
-            ProductService._validate_and_map_attributes(payload.category_id, payload.attributes, db)
+            ProductService._validate_and_map_attributes(
+                payload.category_id, payload.attributes, db
+            )
         elif payload.attributes and not payload.category_id:
             raise HTTPException(
                 status_code=400,
@@ -212,10 +230,21 @@ class ProductService:
                     )
                     db.add(pav)
 
-        db.commit()
-        db.refresh(product)
-        ProductService.clear_product_cache()
-        return ProductService._build_product_response(product)
+        try:
+            db.commit()
+            db.refresh(product)
+            ProductService.clear_product_cache()
+            return ProductService._build_product_response(product)
+        except Exception:
+            db.rollback()
+            # If commit fails, clean up the S3 image that was just uploaded
+            if payload.image_url:
+                try:
+                    s3 = S3Service()
+                    s3.delete_object(payload.image_url)
+                except Exception as s3_err:
+                    logger.error("Failed to clean up S3 image on rollback: %s", s3_err)
+            raise
 
     @staticmethod
     def get_categories(db: Session) -> list[Category]:
@@ -223,8 +252,8 @@ class ProductService:
         return db.query(Category).all()
 
     @staticmethod
-    def get_products(skip: int, limit: int, refresh: bool, db: Session) -> list:
-        """Get all products with caching."""
+    def get_products(skip: int, limit: int, refresh: bool, db: Session) -> dict:
+        """Get all products with caching and pagination metadata."""
         if not refresh:
             cache_key = f"products:list:{skip}:{limit}"
             try:
@@ -234,8 +263,16 @@ class ProductService:
             except Exception as e:
                 logger.error(f"Redis cache get error: {e}")
 
-        products = ProductService._apply_active_filter(db.query(Product)).offset(skip).limit(limit).all()
-        result = [ProductService._build_product_response(p) for p in products]
+        query = ProductService._apply_active_filter(db.query(Product))
+        total = query.count()
+        products = query.offset(skip).limit(limit).all()
+        items = [ProductService._build_product_response(p) for p in products]
+        result = {
+            "items": items,
+            "total": total,
+            "skip": skip,
+            "limit": limit,
+        }
 
         try:
             redis_client.setex(cache_key, 30, json.dumps(result))
@@ -268,7 +305,11 @@ class ProductService:
         except Exception as e:
             logger.error(f"Redis cache get error: {e}")
 
-        product = ProductService._apply_active_filter(db.query(Product)).filter(Product.id == product_id).first()
+        product = (
+            ProductService._apply_active_filter(db.query(Product))
+            .filter(Product.id == product_id)
+            .first()
+        )
         if not product:
             raise HTTPException(404, "Product not found")
 
@@ -280,21 +321,41 @@ class ProductService:
         return result
 
     @staticmethod
-    def update_product(product_id: int, payload: ProductUpdate, current_user: User, db: Session) -> dict:
+    def update_product(
+        product_id: int, payload: ProductUpdate, current_user: User, db: Session
+    ) -> dict:
         """Update a product."""
         if "product:update" not in AuthService.get_permission_codes(current_user):
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Permission denied: 'product:update' required.")
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Permission denied: 'product:update' required.",
+            )
 
-        product = ProductService._apply_active_filter(db.query(Product)).filter(Product.id == product_id).first()
+        product = (
+            ProductService._apply_active_filter(db.query(Product))
+            .filter(Product.id == product_id)
+            .first()
+        )
         if not product:
             raise HTTPException(status_code=404, detail="Product not found")
 
         # Validate category nếu có thay đổi
         update_data = payload.model_dump(exclude_unset=True)
         if "category_id" in update_data and update_data["category_id"] is not None:
-            category = db.query(Category).filter(Category.id == update_data["category_id"]).first()
+            category = (
+                db.query(Category)
+                .filter(Category.id == update_data["category_id"])
+                .first()
+            )
             if not category:
-                raise HTTPException(status_code=400, detail=f"Category id={update_data['category_id']} not found")
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Category id={update_data['category_id']} not found",
+                )
+
+        # Track old image key before update for cleanup
+        old_image_key = product.image_url
+        image_changed = "image_url" in update_data and update_data["image_url"] != old_image_key
 
         # Cập nhật các field thông thường
         for key, value in update_data.items():
@@ -315,18 +376,47 @@ class ProductService:
                     detail="Cannot set attributes without a category",
                 )
 
-        db.commit()
-        db.refresh(product)
-        ProductService.clear_product_cache(product_id)
-        return ProductService._build_product_response(product)
+        try:
+            db.commit()
+            db.refresh(product)
+            ProductService.clear_product_cache(product_id)
+
+            # If image changed and old image was an S3 object key, delete old image from S3
+            if image_changed and old_image_key:
+                try:
+                    s3 = S3Service()
+                    s3.delete_object(old_image_key)
+                except Exception as s3_err:
+                    logger.error("Failed to delete old S3 image: %s", s3_err)
+
+            return ProductService._build_product_response(product)
+        except Exception:
+            db.rollback()
+            # If commit fails and a new image was provided, clean up the new S3 image
+            if image_changed and update_data.get("image_url"):
+                try:
+                    s3 = S3Service()
+                    s3.delete_object(update_data["image_url"])
+                except Exception as s3_err:
+                    logger.error("Failed to clean up new S3 image on rollback: %s", s3_err)
+            raise
 
     @staticmethod
-    def update_product_status(product_id: int, payload: ProductStatusUpdate, current_user: User, db: Session) -> dict:
+    def update_product_status(
+        product_id: int, payload: ProductStatusUpdate, current_user: User, db: Session
+    ) -> dict:
         """Update product status."""
         if "product:update" not in AuthService.get_permission_codes(current_user):
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Permission denied: 'product:update' required.")
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Permission denied: 'product:update' required.",
+            )
 
-        product = ProductService._apply_active_filter(db.query(Product)).filter(Product.id == product_id).first()
+        product = (
+            ProductService._apply_active_filter(db.query(Product))
+            .filter(Product.id == product_id)
+            .first()
+        )
         if not product:
             raise HTTPException(status_code=404, detail="Product not found")
 
@@ -334,7 +424,7 @@ class ProductService:
         if payload.status not in valid_statuses:
             raise HTTPException(
                 status_code=400,
-                detail=f"Invalid status. Allowed values: {', '.join(valid_statuses)}"
+                detail=f"Invalid status. Allowed values: {', '.join(valid_statuses)}",
             )
 
         product.status = payload.status
@@ -347,7 +437,10 @@ class ProductService:
     def delete_product(product_id: int, current_user: User, db: Session) -> dict:
         """Soft delete a product."""
         if "product:delete" not in AuthService.get_permission_codes(current_user):
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Permission denied: 'product:delete' required.")
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Permission denied: 'product:delete' required.",
+            )
 
         product = db.query(Product).filter(Product.id == product_id).first()
         if not product:

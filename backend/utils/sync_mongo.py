@@ -4,9 +4,7 @@ import logging
 from models.products_model import Product
 from utils.mongodb import product_collection, mongo_db
 
-
 logger = logging.getLogger(__name__)
-
 
 
 def sync_products(db):
@@ -68,9 +66,7 @@ def sync_products(db):
                 "updated_at": p.updated_at.isoformat() if p.updated_at else None,
             }
             # ReplaceOne with upsert=True safely updates existing or inserts new
-            operations.append(
-                ReplaceOne({"product_id": p.id}, doc, upsert=True)
-            )
+            operations.append(ReplaceOne({"product_id": p.id}, doc, upsert=True))
 
         # 1. Upsert all products from MySQL to MongoDB
         if operations:
@@ -106,4 +102,3 @@ def sync_products(db):
                 mongo_db["sync_log"].insert_one(sync_log)
             except Exception as log_e:
                 logger.error(f"Failed to write sync log to MongoDB: {log_e}")
-

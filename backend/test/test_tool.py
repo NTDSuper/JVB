@@ -13,43 +13,39 @@ load_dotenv()
 # Planner LLM
 # ==========================
 planner = ChatNVIDIA(
-  model="qwen/qwen3.5-397b-a17b",
-  api_key=os.getenv("NVIDIA_API_KEY"),
-  temperature=0.6,
-  top_p=0.95,
-  max_completion_tokens=16384,
+    model="qwen/qwen3.5-397b-a17b",
+    api_key=os.getenv("NVIDIA_API_KEY"),
+    temperature=0.6,
+    top_p=0.95,
+    max_completion_tokens=16384,
 )
 
 # ==========================
 # SQL Agent
 # ==========================
 sql_llm = ChatNVIDIA(
-  model="qwen/qwen3.5-397b-a17b",
-  api_key=os.getenv("NVIDIA_API_KEY"),
-  temperature=0.6,
-  top_p=0.95,
-  max_completion_tokens=16384,
+    model="qwen/qwen3.5-397b-a17b",
+    api_key=os.getenv("NVIDIA_API_KEY"),
+    temperature=0.6,
+    top_p=0.95,
+    max_completion_tokens=16384,
 )
 
 formatter_llm = ChatNVIDIA(
-  model="qwen/qwen3.5-397b-a17b",
-  api_key=os.getenv("NVIDIA_API_KEY"),
-  temperature=0.6,
-  top_p=0.95,
-  max_completion_tokens=16384,
+    model="qwen/qwen3.5-397b-a17b",
+    api_key=os.getenv("NVIDIA_API_KEY"),
+    temperature=0.6,
+    top_p=0.95,
+    max_completion_tokens=16384,
 )
 
-db = SQLDatabase.from_uri(
-    "mysql+pymysql://root:123456@localhost:3307/mydb"
-)
+db = SQLDatabase.from_uri("mysql+pymysql://root:123456@localhost:3307/mydb")
 
 sql_agent = create_sql_agent(
     llm=sql_llm,
     db=db,
     verbose=True,
-    agent_executor_kwargs={
-        "handle_parsing_errors": True
-    }
+    agent_executor_kwargs={"handle_parsing_errors": True},
 )
 
 # ==========================
@@ -93,9 +89,7 @@ plan = json.loads(plan.content)
 # SQL Agent
 # ==========================
 
-sql_result = sql_agent.invoke({
-    "input": plan["question"]
-})
+sql_result = sql_agent.invoke({"input": plan["question"]})
 
 print("\n========== SQL ==========")
 print(sql_result["output"])
@@ -108,8 +102,9 @@ response = {
     "display": plan["display"],
     "chart_type": plan["chart_type"],
     "title": question,
-    "data": sql_result["output"]
+    "data": sql_result["output"],
 }
+
 
 def formatter(user_question, sql_result, display, chart_type):
 
@@ -159,12 +154,13 @@ SQL Result:
 
     return json.loads(response.content)
 
+
 result = formatter(
-        user_question=question,
-        sql_result=sql_result,
-        display=plan["display"],
-        chart_type=plan["chart_type"]
-    )
+    user_question=question,
+    sql_result=sql_result,
+    display=plan["display"],
+    chart_type=plan["chart_type"],
+)
 
 print(result)
 

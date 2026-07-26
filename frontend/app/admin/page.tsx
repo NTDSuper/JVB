@@ -1,16 +1,19 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import api from "@/lib/api";
-import ProtectedRoute from "@/components/ProtectedRouter";
+import { withProtection } from "@/components/ProtectedRouter";
 import Toast from "@/components/Toast";
-import { User, UserAdminUpdate } from "@/types/dto";
+import { User, UserAdminUpdate, Role } from "@/types/dto";
 
-export default function AdminPage() {
+function AdminPage() {
+  const router = useRouter();
   const [users, setUsers] = useState<User[]>([]);
+  const [roles, setRoles] = useState<Role[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  
+
   // Modal states
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -29,12 +32,25 @@ export default function AdminPage() {
     email: "",
     full_name: "",
     is_active: true,
+    role: "",
   });
 
   const [toast, setToast] = useState<{
     message: string;
     type: "success" | "error" | "info";
   } | null>(null);
+
+  const getErrorMessage = (err: any, fallback: string): string => {
+    const detail = err.response?.data?.detail;
+    if (typeof detail === "string") return detail;
+    if (Array.isArray(detail)) {
+      return detail.map((d: any) => d.msg || JSON.stringify(d)).join("; ");
+    }
+    if (typeof detail === "object" && detail !== null) {
+      return detail.msg || JSON.stringify(detail);
+    }
+    return fallback;
+  };
 
   const fetchUsers = async () => {
     try {
@@ -54,8 +70,18 @@ export default function AdminPage() {
     }
   };
 
+  const fetchRoles = async () => {
+    try {
+      const res = await api.get<Role[]>("/roles");
+      setRoles(res.data);
+    } catch (err: any) {
+      console.error("Failed to load roles", err);
+    }
+  };
+
   useEffect(() => {
     fetchUsers();
+    fetchRoles();
   }, []);
 
   const handleAddSubmit = async (e: React.FormEvent) => {
@@ -67,18 +93,18 @@ export default function AdminPage() {
       setAddUserForm({ username: "", email: "", password: "", full_name: "" });
       fetchUsers();
     } catch (err: any) {
-      const detail = err.response?.data?.detail || "Failed to add user.";
-      setToast({ message: detail, type: "error" });
+      setToast({ message: getErrorMessage(err, "Failed to add user."), type: "error" });
     }
   };
 
   const handleEditClick = (user: User) => {
-    setSelectedUser(user);
-    setEditUserForm({
-      username: user.username,
-      email: user.email,
-      full_name: user.full_name || "",
-      is_active: user.is_active,
+  setSelectedUser(user);
+  setEditUserForm({
+    username: user.username,
+    email: user.email,
+    full_name: user.full_name || "",
+    is_active: user.is_active,
+    role: Array.isArray(user.role) ? user.role[0] ?? "" : user.role ?? "",
     });
     setShowEditModal(true);
   };
@@ -87,14 +113,17 @@ export default function AdminPage() {
     e.preventDefault();
     if (!selectedUser) return;
     try {
-      await api.patch(`/users/${selectedUser.id}`, editUserForm);
+      const payload = {
+        ...editUserForm,
+        role: editUserForm.role ? [editUserForm.role] : [],
+      };
+      await api.patch(`/users/${selectedUser.id}`, payload);
       setToast({ message: "User updated successfully.", type: "success" });
       setShowEditModal(false);
       setSelectedUser(null);
       fetchUsers();
     } catch (err: any) {
-      const detail = err.response?.data?.detail || "Failed to update user.";
-      setToast({ message: detail, type: "error" });
+      setToast({ message: getErrorMessage(err, "Failed to update user."), type: "error" });
     }
   };
 
@@ -105,8 +134,7 @@ export default function AdminPage() {
       setToast({ message: res.data.message || "User deleted successfully.", type: "success" });
       fetchUsers();
     } catch (err: any) {
-      const detail = err.response?.data?.detail || "Failed to delete user.";
-      setToast({ message: detail, type: "error" });
+      setToast({ message: getErrorMessage(err, "Failed to delete user."), type: "error" });
     }
   };
 
@@ -121,40 +149,42 @@ export default function AdminPage() {
       });
       fetchUsers();
     } catch (err: any) {
-      const detail = err.response?.data?.detail || "Failed to change status.";
-      setToast({ message: detail, type: "error" });
+      setToast({ message: getErrorMessage(err, "Failed to change status."), type: "error" });
     }
   };
 
+  const handleRoleToggle = (roleName: string) => {
+  setEditUserForm((prev) => ({
+    ...prev,
+    role: roleName,
+  }));
+};
+
   if (loading) {
     return (
-      <ProtectedRoute roles = {["admin"]}>
-        <div className="page-container">
-          <div className="skeleton" style={{ height: 40, width: "30%", marginBottom: 24 }} />
-          <div className="skeleton" style={{ height: 300 }} />
-        </div>
-      </ProtectedRoute>
+      <div className="page-container">
+        <div className="skeleton" style={{ height: 40, width: "30%", marginBottom: 24 }} />
+        <div className="skeleton" style={{ height: 300 }} />
+      </div>
     );
   }
 
   if (error) {
     return (
-      <ProtectedRoute roles = {["admin"]}>
-        <div className="page-container">
-          <div className="empty-state">
-            <div className="empty-state-icon">🔒</div>
-            <div className="empty-state-title">{error}</div>
-            <p className="empty-state-text">
-              Please contact your administrator if you believe this is a mistake.
-            </p>
-          </div>
+      <div className="page-container">
+        <div className="empty-state">
+          <div className="empty-state-icon">🔒</div>
+          <div className="empty-state-title">{error}</div>
+          <p className="empty-state-text">
+            Please contact your administrator if you believe this is a mistake.
+          </p>
         </div>
-      </ProtectedRoute>
+      </div>
     );
   }
 
   return (
-    <ProtectedRoute roles = {["admin"]}>
+    <>
       <div className="page-container animate-fade-in">
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 32, gap: 16, flexWrap: "wrap" }}>
           <div>
@@ -176,6 +206,7 @@ export default function AdminPage() {
                   <th style={{ padding: "16px 24px" }}>ID</th>
                   <th>Username</th>
                   <th>Email</th>
+                  <th>Roles</th>
                   <th>Status</th>
                   <th style={{ textAlign: "right", paddingRight: 24 }}>Actions</th>
                 </tr>
@@ -188,6 +219,15 @@ export default function AdminPage() {
                     </td>
                     <td>{user.username}</td>
                     <td>{user.email}</td>
+                    <td>
+                      <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+                        {(user.role ?? []).map((r) => (
+                          <span key={r} className="badge badge-info" style={{ fontSize: 11 }}>
+                            {r}
+                          </span>
+                        ))}
+                      </div>
+                    </td>
                     <td>
                       <button
                         onClick={() => toggleUserStatus(user)}
@@ -324,6 +364,38 @@ export default function AdminPage() {
                     placeholder="Enter email"
                   />
                 </div>
+                <div style={{ marginBottom: 12 }}>
+                  <label className="form-label">Roles</label>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 4 }}>
+                    {roles.map((role) => (
+                      <label
+                        key={role.id}
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 6,
+                          padding: "6px 12px",
+                          borderRadius: 8,
+                          border: `2px solid ${(editUserForm.role ?? "") === role.name ? "var(--primary)" : "var(--border)"}`,
+                          background: (editUserForm.role ?? "") === role.name ? "rgba(99, 102, 241, 0.1)" : "transparent",
+                          cursor: "pointer",
+                          userSelect: "none",
+                          fontSize: 13,
+                          transition: "all 0.15s ease",
+                        }}
+                      >
+                        <input
+                          type="radio"
+                          name="role"
+                          checked={(editUserForm.role ?? "") === role.name}
+                          onChange={() => handleRoleToggle(role.name)}
+                          style={{ accentColor: "var(--primary)" }}
+                        />
+                        {role.name}
+                      </label>
+                    ))}
+                  </div>
+                </div>
                 <div style={{ marginBottom: 20 }}>
                   <label className="form-label">Account Status</label>
                   <select
@@ -356,6 +428,8 @@ export default function AdminPage() {
           onClose={() => setToast(null)}
         />
       )}
-    </ProtectedRoute>
+    </>
   );
 }
+
+export default withProtection(AdminPage, ["admin"]);

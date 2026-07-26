@@ -10,7 +10,7 @@ export default function HomePage() {
 
   useEffect(() => {
     if (isLoading) return;
-    router.replace(isAuthenticated ? "/products" : "/login");
+    router.replace(isAuthenticated ? "/products" : "/products");
   }, [router, isAuthenticated, isLoading]);
 
   return (

@@ -7,15 +7,11 @@ class ProductAttributeValue(Base):
     __tablename__ = "product_attribute_values"
 
     product_id: Mapped[int] = mapped_column(
-        BigInteger,
-        ForeignKey("products.id"),
-        primary_key=True
+        BigInteger, ForeignKey("products.id"), primary_key=True
     )
 
     attribute_id: Mapped[int] = mapped_column(
-        Integer,
-        ForeignKey("attributes.id"),
-        primary_key=True
+        Integer, ForeignKey("attributes.id"), primary_key=True
     )
 
     value: Mapped[str | None] = mapped_column(Text)

@@ -11,6 +11,7 @@ class PaymentResponse(BaseModel):
     status: str
     expires_at: Optional[datetime] = None
     paid_at: Optional[datetime] = None
+    refund_at: Optional[datetime] = None
 
     class Config:
         from_attributes = True
@@ -22,6 +23,7 @@ class PaymentResult(BaseModel):
     - success=True  -> thanh toan thanh cong
     - success=False -> thanh toan that bai (kem ly do)
     """
+
     success: bool
     message: str
     payment: Optional[PaymentResponse] = None
@@ -29,4 +31,3 @@ class PaymentResult(BaseModel):
 
 class PayRequest(BaseModel):
     pass
-

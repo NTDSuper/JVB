@@ -3,11 +3,12 @@
 import { useEffect, useState, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import api from "@/lib/api";
-import ProtectedRoute from "@/components/ProtectedRouter";
+import { withProtection } from "@/components/ProtectedRouter";
 import Toast from "@/components/Toast";
 import { Order, Payment } from "@/types/dto";
+import { useAuthContext } from "@/auth/contexts/AuthContext";
 
-export default function OrderDetailPage() {
+function OrderDetailPage() {
   const params = useParams();
   const router = useRouter();
   const orderIdStr = params.id as string;
@@ -22,6 +23,7 @@ export default function OrderDetailPage() {
     message: string;
     type: "success" | "error" | "info";
   } | null>(null);
+  const { user } = useAuthContext();
 
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -59,7 +61,6 @@ export default function OrderDetailPage() {
         if (diff <= 0) {
           setTimeLeft("Expired");
           if (timerRef.current) clearInterval(timerRef.current);
-          // Refresh data since order status will be changed to cancelled in DB
           await fetchData();
         } else {
           const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
@@ -80,16 +81,15 @@ export default function OrderDetailPage() {
   }, [order?.status, payment?.status, payment?.expires_at]);
 
   const handlePay = async () => {
-    if (actionLoading) return; // Prevent double-click
+    if (actionLoading) return;
     try {
       setActionLoading(true);
       const res = await api.post(`/payments/${orderId}/pay`);
       if (res.data.success) {
-        setToast({ message: res.data.message || "Payment completed successfully!", type: "success" });
+        setToast({ message: "Payment successful! Your order is being processed.", type: "success" });
       } else {
         setToast({ message: res.data.message || "Payment failed.", type: "error" });
       }
-      // Refresh order and payment details
       await fetchData();
     } catch (err: any) {
       const detail = err.response?.data?.detail || "An error occurred during payment processing.";
@@ -100,7 +100,6 @@ export default function OrderDetailPage() {
     }
   };
 
-  // Retry: tao payment moi (co thoi han) + tru stock
   const handleRetry = async () => {
     if (actionLoading) return;
     try {
@@ -109,13 +108,13 @@ export default function OrderDetailPage() {
         payment_method: payment?.method || "credit_card",
       });
       if (res.data.success) {
-        setToast({ message: "Da tao thanh toan moi! Vui long thanh toan truoc khi het han.", type: "success" });
+        setToast({ message: "New payment created! Please pay before the deadline.", type: "success" });
       } else {
-        setToast({ message: res.data.message || "Khong the tao thanh toan moi.", type: "error" });
+        setToast({ message: res.data.message || "Failed to create new payment.", type: "error" });
       }
       await fetchData();
     } catch (err: any) {
-      const detail = err.response?.data?.detail || "Loi tao thanh toan.";
+      const detail = err.response?.data?.detail || "Failed to create new payment.";
       setToast({ message: detail, type: "error" });
       await fetchData();
     } finally {
@@ -130,9 +129,40 @@ export default function OrderDetailPage() {
       const res = await api.post<Order>(`/orders/${orderId}/cancel`, {});
       setOrder(res.data);
       setToast({ message: "Order cancelled successfully.", type: "info" });
-      // Refresh payment as well
       const paymentRes = await api.get<Payment>(`/payments/${orderId}`);
       setPayment(paymentRes.data);
+    } catch (err: any) {
+      const detail = err.response?.data?.detail || "Failed to cancel order.";
+      setToast({ message: detail, type: "error" });
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleAdminConfirm = async () => {
+    if (!confirm("Confirm order completion?")) return;
+    try {
+      setActionLoading(true);
+      const res = await api.post<Order>(`/orders/${orderId}/confirm`, {});
+      setOrder(res.data);
+      setToast({ message: "Order confirmed as completed.", type: "success" });
+      await fetchData();
+    } catch (err: any) {
+      const detail = err.response?.data?.detail || "Failed to confirm order.";
+      setToast({ message: detail, type: "error" });
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleAdminCancel = async () => {
+    if (!confirm("Are you sure you want to cancel this order? Stock will be restored.")) return;
+    try {
+      setActionLoading(true);
+      const res = await api.post<Order>(`/orders/${orderId}/admin-cancel`, {});
+      setOrder(res.data);
+      setToast({ message: "Order cancelled. Stock has been restored.", type: "info" });
+      await fetchData();
     } catch (err: any) {
       const detail = err.response?.data?.detail || "Failed to cancel order.";
       setToast({ message: detail, type: "error" });
@@ -147,65 +177,69 @@ export default function OrderDetailPage() {
         return "badge-success";
       case "pending":
         return "badge-warning";
+      case "in_progress":
+        return "badge-info";
       case "cancelled":
       case "failed":
+      case "refunded":
         return "badge-danger";
       default:
         return "badge-neutral";
     }
   };
 
-  const formatPrice = (price: number) => {
-    return `$${price.toFixed(2)}`;
-  };
+  const formatPrice = (price: number) => `$${price.toFixed(2)}`;
+
+  const userRoles: string[] = user?.role 
+    ? (Array.isArray(user.role) ? user.role : [user.role]) 
+    : [];
+  const isManager = userRoles.includes("admin") || userRoles.includes("manager");
+  const isOrderOwner = order?.user_id === user?.id;
 
   if (loading) {
     return (
-      <ProtectedRoute>
-        <div className="page-container">
-          <div className="skeleton" style={{ height: 40, width: "30%", marginBottom: 24 }} />
-          <div style={{ display: "flex", gap: 24, flexWrap: "wrap" }}>
-            <div className="skeleton" style={{ flex: 2, height: 300 }} />
-            <div className="skeleton" style={{ flex: 1, height: 300 }} />
-          </div>
+      <div className="page-container">
+        <div className="skeleton" style={{ height: 40, width: "30%", marginBottom: 24 }} />
+        <div style={{ display: "flex", gap: 24, flexWrap: "wrap" }}>
+          <div className="skeleton" style={{ flex: 2, height: 300 }} />
+          <div className="skeleton" style={{ flex: 1, height: 300 }} />
         </div>
-      </ProtectedRoute>
+      </div>
     );
   }
 
   if (!order || !payment) {
     return (
-      <ProtectedRoute>
-        <div className="page-container">
-          <div className="empty-state">
-            <div className="empty-state-icon">❌</div>
-            <div className="empty-state-title">Order details not found</div>
-            <button className="btn btn-primary" onClick={() => router.push("/orders")}>
-              Back to My Orders
-            </button>
-          </div>
+      <div className="page-container">
+        <div className="empty-state">
+          <div className="empty-state-icon">❌</div>
+          <div className="empty-state-title">Order details not found</div>
+          <button className="btn btn-primary" onClick={() => router.push("/orders")}>
+            Back to My Orders
+          </button>
         </div>
-      </ProtectedRoute>
+      </div>
     );
   }
 
   return (
-    <ProtectedRoute>
+    <>
       <div className="page-container animate-fade-in">
-        {/* Back */}
         <button
           className="btn btn-ghost btn-sm"
-          onClick={() => router.push("/orders")}
+          onClick={() => router.push(isManager ? "/orders/manage" : "/orders")}
           style={{ marginBottom: 24 }}
         >
-          ← Back to Orders
+          ← Back to {isManager ? "Order Management" : "Orders"}
         </button>
 
         <div style={{ display: "flex", justifyContent: "between", alignItems: "center", marginBottom: 32, gap: 16, flexWrap: "wrap" }}>
           <div>
             <h1 className="page-title" style={{ margin: 0 }}>Order #{order.id}</h1>
             <p style={{ color: "var(--text-muted)", fontSize: 14, margin: "4px 0 0 0" }}>
-              Thank you for shopping with us!
+              {order.status === "in_progress" 
+                ? "Your order is being processed."
+                : "Thank you for shopping with us!"}
             </p>
           </div>
           <div style={{ display: "flex", gap: 10 }}>
@@ -216,7 +250,6 @@ export default function OrderDetailPage() {
         </div>
 
         <div style={{ display: "flex", gap: 32, flexWrap: "wrap", alignItems: "flex-start" }}>
-          {/* Items & details */}
           <div style={{ flex: 2, minWidth: 300, display: "flex", flexDirection: "column", gap: 24 }}>
             <div className="card">
               <h2 style={{ fontSize: 18, fontWeight: 600, marginBottom: 16, borderBottom: "1px solid var(--border)", paddingBottom: 12 }}>
@@ -252,15 +285,7 @@ export default function OrderDetailPage() {
                 </table>
               </div>
 
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "flex-end",
-                  borderTop: "1px solid var(--border)",
-                  paddingTop: 16,
-                  marginTop: 16,
-                }}
-              >
+              <div style={{ display: "flex", justifyContent: "flex-end", borderTop: "1px solid var(--border)", paddingTop: 16, marginTop: 16 }}>
                 <div style={{ width: 240 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8, fontSize: 14 }}>
                     <span style={{ color: "var(--text-secondary)" }}>Subtotal:</span>
@@ -279,7 +304,6 @@ export default function OrderDetailPage() {
             </div>
           </div>
 
-          {/* Payment panel */}
           <div style={{ flex: 1, minWidth: 300, display: "flex", flexDirection: "column", gap: 24 }}>
             <div className="card">
               <h2 style={{ fontSize: 18, fontWeight: 600, marginBottom: 16, borderBottom: "1px solid var(--border)", paddingBottom: 12 }}>
@@ -299,110 +323,79 @@ export default function OrderDetailPage() {
                   <span style={{ color: "var(--text-secondary)" }}>Amount:</span>
                   <span style={{ fontWeight: 600, color: "var(--accent)" }}>{formatPrice(payment.amount)}</span>
                 </div>
-                {payment.paid_at && payment.status === "completed" && (
+                {payment.paid_at && (payment.status === "completed" || payment.status === "refunded") && (
                   <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14 }}>
                     <span style={{ color: "var(--text-secondary)" }}>Paid At:</span>
                     <span>{new Date(payment.paid_at).toLocaleString()}</span>
                   </div>
                 )}
+                {payment.refund_at && payment.status === "refunded" && (
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14 }}>
+                    <span style={{ color: "var(--text-secondary)" }}>Refunded At:</span>
+                    <span>{new Date(payment.refund_at).toLocaleString()}</span>
+                  </div>
+                )}
               </div>
 
-              {/* Countdown Timer */}
-              {order.status === "pending" && payment.status === "pending" && timeLeft && (
-                <div
-                  style={{
-                    background: "rgba(245, 158, 11, 0.1)",
-                    border: "1px solid rgba(245, 158, 11, 0.2)",
-                    borderRadius: 12,
-                    padding: 16,
-                    textAlign: "center",
-                    marginBottom: 20,
-                  }}
-                >
-                  <div style={{ fontSize: 13, color: "var(--warning)", marginBottom: 4 }}>
-                    ⏰ Payment expires in
-                  </div>
+              {/* Countdown timer - only for order owner */}
+              {isOrderOwner && order.status === "pending" && payment.status === "pending" && timeLeft && (
+                <div style={{ background: "rgba(245, 158, 11, 0.1)", border: "1px solid rgba(245, 158, 11, 0.2)", borderRadius: 12, padding: 16, textAlign: "center", marginBottom: 20 }}>
+                  <div style={{ fontSize: 13, color: "var(--warning)", marginBottom: 4 }}>⏰ Payment expires in</div>
                   <div style={{ fontSize: 24, fontWeight: 800, color: "#f59e0b" }}>{timeLeft}</div>
-                  <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 4 }}>
-                    Please complete the payment before this timer reaches 0.
-                  </div>
+                  <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 4 }}>Please complete payment before timer reaches 0.</div>
                 </div>
               )}
 
-              {/* Action Buttons */}
-              {(order.status === "pending" && payment.status === "pending" && timeLeft !== "Expired") && (
+              {/* Pay Now & Cancel - only for order owner */}
+              {isOrderOwner && order.status === "pending" && payment.status === "pending" && timeLeft !== "Expired" && (
                 <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                  <button
-                    className="btn btn-success btn-lg"
-                    style={{ width: "100%" }}
-                    onClick={handlePay}
-                    disabled={actionLoading}
-                  >
+                  <button className="btn btn-success btn-lg" style={{ width: "100%" }} onClick={handlePay} disabled={actionLoading}>
                     {actionLoading ? "Processing Payment..." : "Pay Now"}
                   </button>
-
-                  <button
-                    className="btn btn-ghost"
-                    style={{ width: "100%", color: "var(--danger)", borderColor: "rgba(239, 68, 68, 0.2)" }}
-                    onClick={handleCancel}
-                    disabled={actionLoading}
-                  >
+                  <button className="btn btn-ghost" style={{ width: "100%", color: "var(--danger)", borderColor: "rgba(239, 68, 68, 0.2)" }} onClick={handleCancel} disabled={actionLoading}>
                     {actionLoading ? "Processing..." : "Cancel Order"}
                   </button>
                 </div>
               )}
 
-              {/* Retry payment button when expired or failed */}
-              {(payment.status === "failed" || payment.status === "cancelled" || timeLeft === "Expired") && order.status !== "completed" && (
+              {/* Retry payment - only for order owner */}
+              {isOrderOwner && (payment.status === "failed" || payment.status === "cancelled" || timeLeft === "Expired") && order.status !== "completed" && order.status !== "in_progress" && (
                 <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                  <button
-                    className="btn btn-warning btn-lg"
-                    style={{ width: "100%", backgroundColor: "#f59e0b", borderColor: "#d97706", color: "#000" }}
-                    onClick={handleRetry}
-                    disabled={actionLoading}
-                  >
+                  <button className="btn btn-warning btn-lg" style={{ width: "100%", backgroundColor: "#f59e0b", borderColor: "#d97706", color: "#000" }} onClick={handleRetry} disabled={actionLoading}>
                     {actionLoading ? "Creating Payment..." : "Try Pay Again"}
                   </button>
-                  <div style={{ fontSize: 12, color: "var(--text-muted)", textAlign: "center" }}>
-                    Your previous payment has expired. Click to create a new payment with a fresh deadline.
-                  </div>
                 </div>
               )}
 
-              {/* Post-payment information alerts */}
-              {payment.status === "completed" && (
-                <div
-                  style={{
-                    background: "rgba(16, 185, 129, 0.1)",
-                    border: "1px solid rgba(16, 185, 129, 0.2)",
-                    borderRadius: 12,
-                    padding: 16,
-                    color: "#34d399",
-                    fontSize: 14,
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 10,
-                  }}
-                >
+              {/* Manager actions - only when IN_PROGRESS */}
+              {isManager && order.status === "in_progress" && (
+                <div style={{ display: "flex", flexDirection: "column", gap: 12, marginTop: 8 }}>
+                  <button className="btn btn-success btn-lg" style={{ width: "100%" }} onClick={handleAdminConfirm} disabled={actionLoading}>
+                    {actionLoading ? "Processing..." : "Confirm Order"}
+                  </button>
+                  <button className="btn btn-danger btn-lg" style={{ width: "100%" }} onClick={handleAdminCancel} disabled={actionLoading}>
+                    {actionLoading ? "Processing..." : "Cancel Order"}
+                  </button>
+                </div>
+              )}
+
+              {/* Status alert boxes */}
+              {payment.status === "completed" && order.status === "in_progress" && (
+                <div style={{ background: "rgba(96, 165, 250, 0.1)", border: "1px solid rgba(96, 165, 250, 0.2)", borderRadius: 12, padding: 16, color: "#60a5fa", fontSize: 14, display: "flex", alignItems: "center", gap: 10 }}>
+                  <span>⏳</span>
+                  <span>Payment successful! Your order is being processed. Please wait for manager confirmation.</span>
+                </div>
+              )}
+
+              {order.status === "completed" && (
+                <div style={{ background: "rgba(16, 185, 129, 0.1)", border: "1px solid rgba(16, 185, 129, 0.2)", borderRadius: 12, padding: 16, color: "#34d399", fontSize: 14, display: "flex", alignItems: "center", gap: 10 }}>
                   <span>✅</span>
-                  <span>This order has been fully paid and processed.</span>
+                  <span>This order has been completed.</span>
                 </div>
               )}
 
-              {(order.status === "cancelled" || payment.status === "failed") && (
-                <div
-                  style={{
-                    background: "rgba(239, 68, 68, 0.1)",
-                    border: "1px solid rgba(239, 68, 68, 0.2)",
-                    borderRadius: 12,
-                    padding: 16,
-                    color: "#f87171",
-                    fontSize: 14,
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 10,
-                  }}
-                >
+              {(order.status === "cancelled" || payment.status === "failed" || payment.status === "refunded") && (
+                <div style={{ background: "rgba(239, 68, 68, 0.1)", border: "1px solid rgba(239, 68, 68, 0.2)", borderRadius: 12, padding: 16, color: "#f87171", fontSize: 14, display: "flex", alignItems: "center", gap: 10 }}>
                   <span>❌</span>
                   <span>This order has been cancelled or payment failed.</span>
                 </div>
@@ -412,13 +405,9 @@ export default function OrderDetailPage() {
         </div>
       </div>
 
-      {toast && (
-        <Toast
-          message={toast.message}
-          type={toast.type}
-          onClose={() => setToast(null)}
-        />
-      )}
-    </ProtectedRoute>
+      {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
+    </>
   );
 }
+
+export default withProtection(OrderDetailPage);

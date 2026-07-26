@@ -32,10 +32,7 @@ class RedisChatHistory(BaseChatMessageHistory):
         messages = self.messages
         messages.append(message)
 
-        redis_client.set(
-            self.key,
-            json.dumps(messages_to_dict(messages))
-        )
+        redis_client.set(self.key, json.dumps(messages_to_dict(messages)))
 
         if self.ttl:
             redis_client.expire(self.key, self.ttl)
@@ -43,8 +40,6 @@ class RedisChatHistory(BaseChatMessageHistory):
     def clear(self) -> None:
         redis_client.delete(self.key)
 
+
 def get_session_history(session_id: str):
-    return RedisChatHistory(
-        session_id=session_id,
-        ttl=5 * 60  # 5 phút, 
-    )
+    return RedisChatHistory(session_id=session_id, ttl=5 * 60)  # 5 phút,

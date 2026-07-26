@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -82,45 +83,14 @@ const CHART_BORDER_COLORS = [
   "#84cc16",
 ];
 
+function getCssVar(name: string, fallback: string): string {
+  if (typeof window === "undefined") return fallback;
+  return getComputedStyle(document.documentElement).getPropertyValue(name).trim() || fallback;
+}
+
 // ── Heuristics: tự động quyết định widget to hay nhỏ dựa vào data ──
 
-function isSmallWidget(widget: AiWidgetData): boolean {
-  if (widget.display === "kpi") {
-    // KPI luôn là small (2 cái 1 dòng)
-    return true;
-  }
-
-  if (widget.display === "chart" && widget.chart) {
-    const { type, data } = widget.chart;
-    const labelCount = data.labels?.length ?? 0;
-    const datasetCount = data.datasets?.length ?? 0;
-    const totalDataPoints = data.datasets?.reduce(
-      (sum, ds) => sum + (ds.data?.length ?? 0),
-      0
-    ) ?? 0;
-
-    switch (type) {
-      case "pie":
-        // Pie ít slice → small, nhiều slice → large
-        return labelCount <= 6;
-      case "bar":
-        // Bar ít cột & ít dataset → small, nhiều → large
-        return labelCount <= 6 && datasetCount <= 2 && totalDataPoints <= 12;
-      case "line":
-        // Line ít điểm → small, nhiều → large (line thường là trend cần rộng)
-        return labelCount <= 4 && datasetCount <= 1;
-      default:
-        return false;
-    }
-  }
-
-  if (widget.display === "table") {
-    const columns = widget.table?.length > 0 ? Object.keys(widget.table[0]).length : 0;
-    const rows = widget.table?.length ?? 0;
-    // Table nhỏ: ít cột & ít dòng
-    return columns <= 3 && rows <= 5;
-  }
-
+function isSmallWidget(_widget: AiWidgetData): boolean {
   return false;
 }
 
@@ -196,6 +166,17 @@ function TableWidget({ table }: { table: Record<string, any>[] }) {
 }
 
 function ChartWidget({ chart, isSmall }: { chart: Chart; isSmall: boolean }) {
+  const [, setTick] = useState(0);
+
+  // Listen for theme changes to re-render chart
+  useEffect(() => {
+    const observer = new MutationObserver(() => {
+      setTick((t) => t + 1);
+    });
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+    return () => observer.disconnect();
+  }, []);
+
   if (!chart || !chart.data || !chart.data.labels) {
     return (
       <div className="card" style={{ textAlign: "center", padding: 32 }}>
@@ -205,6 +186,14 @@ function ChartWidget({ chart, isSmall }: { chart: Chart; isSmall: boolean }) {
   }
 
   const { labels, datasets } = chart.data;
+
+  // Get theme-aware colors at render time
+  const chartTextColor = getCssVar("--chart-text", "#94A3B8");
+  const chartGridColor = getCssVar("--chart-grid", "rgba(148, 163, 184, 0.12)");
+  const tooltipBg = getCssVar("--chart-tooltip-bg", "#1E293B");
+  const tooltipBorder = getCssVar("--chart-tooltip-border", "rgba(148, 163, 184, 0.18)");
+  const tooltipTitleColor = getCssVar("--chart-tooltip-title", "#F1F5F9");
+  const tooltipBodyColor = getCssVar("--chart-tooltip-body", "#CBD5E1");
 
   // Build Chart.js compatible datasets
   const chartJsDatasets = datasets.map((ds, i) => ({
@@ -226,9 +215,9 @@ function ChartWidget({ chart, isSmall }: { chart: Chart; isSmall: boolean }) {
     maintainAspectRatio: false,
     plugins: {
       legend: {
-        display: !isSmall, // hide legend on small charts to save space
+        display: !isSmall,
         labels: {
-          color: "#94a3b8",
+          color: chartTextColor,
           boxWidth: isSmall ? 8 : 12,
           font: {
             size: isSmall ? 10 : 12,
@@ -236,23 +225,23 @@ function ChartWidget({ chart, isSmall }: { chart: Chart; isSmall: boolean }) {
         },
       },
       tooltip: {
-        backgroundColor: "#182231",
-        borderColor: "rgba(148, 163, 184, 0.18)",
+        backgroundColor: tooltipBg,
+        borderColor: tooltipBorder,
         borderWidth: 1,
-        titleColor: "#f1f5f9",
-        bodyColor: "#f1f5f9",
+        titleColor: tooltipTitleColor,
+        bodyColor: tooltipBodyColor,
       },
     },
     scales:
       chart.type !== "pie"
         ? {
             x: {
-              ticks: { color: "#94a3b8", font: { size: isSmall ? 9 : 11 } },
-              grid: { color: "rgba(148, 163, 184, 0.12)" },
+              ticks: { color: chartTextColor, font: { size: isSmall ? 9 : 11 } },
+              grid: { color: chartGridColor },
             },
             y: {
-              ticks: { color: "#94a3b8", font: { size: isSmall ? 9 : 11 } },
-              grid: { color: "rgba(148, 163, 184, 0.12)" },
+              ticks: { color: chartTextColor, font: { size: isSmall ? 9 : 11 } },
+              grid: { color: chartGridColor },
             },
           }
         : undefined,
@@ -272,7 +261,7 @@ function ChartWidget({ chart, isSmall }: { chart: Chart; isSmall: boolean }) {
   };
 
   return (
-    <div className="card" style={{ height: "100%" }}>
+    <div className="card" style={{ height: "100%", overflow: "hidden", position: "relative" }}>
       <div className="table-card-header" style={{ padding: "0 0 12px" }}>
         <h2
           style={{
@@ -285,7 +274,7 @@ function ChartWidget({ chart, isSmall }: { chart: Chart; isSmall: boolean }) {
           {chart.type} Chart
         </h2>
       </div>
-      <div style={{ height: isSmall ? 200 : 360 }}>
+      <div style={{ height: isSmall ? 200 : 360, position: "relative" }}>
         {renderChart()}
       </div>
     </div>
@@ -299,22 +288,20 @@ export default function AiDashboardWidget({
 }: {
   widget: AiWidgetData;
 }) {
+  // Use theme-aware text color
+  const summaryColor = getCssVar("--text-secondary", "#94A3B8");
   const small = isSmallWidget(widget);
 
   // Small widget: render 2 per row, no separate summary card
   if (small) {
-    // Small chart
     if (widget.display === "chart" && widget.chart) {
       return (
         <div
           style={{
-            display: "inline-flex",
+            display: "flex",
             flexDirection: "column",
-            width: "50%",
-            padding: "0 6px",
-            marginBottom: 18,
+            width: "calc(50% - 6px)",
             boxSizing: "border-box",
-            verticalAlign: "top",
           }}
         >
           <ChartWidget chart={widget.chart} isSmall={true} />
@@ -322,18 +309,14 @@ export default function AiDashboardWidget({
       );
     }
 
-    // Small table
     if (widget.display === "table") {
       return (
         <div
           style={{
-            display: "inline-flex",
+            display: "flex",
             flexDirection: "column",
-            width: "50%",
-            padding: "0 6px",
-            marginBottom: 18,
+            width: "calc(50% - 6px)",
             boxSizing: "border-box",
-            verticalAlign: "top",
           }}
         >
           <TableWidget table={widget.table} />
@@ -341,18 +324,14 @@ export default function AiDashboardWidget({
       );
     }
 
-    // Small KPI
     if (widget.display === "kpi") {
       return (
         <div
           style={{
-            display: "inline-flex",
+            display: "flex",
             flexDirection: "column",
-            width: "50%",
-            padding: "0 6px",
-            marginBottom: 18,
+            width: "calc(50% - 6px)",
             boxSizing: "border-box",
-            verticalAlign: "top",
           }}
         >
           <KpiCard summary={widget.summary} />
@@ -363,12 +342,12 @@ export default function AiDashboardWidget({
 
   // Large widget: full width with summary card
   return (
-    <div style={{ marginBottom: 18 }}>
+    <div style={{ width: "100%", overflow: "hidden" }}>
       <div
         className="card"
-        style={{ marginBottom: 12, padding: "12px 20px" }}
+        style={{ marginBottom: 20, marginTop: 20, padding: "12px 20px" }}
       >
-        <p style={{ color: "#94a3b8", fontSize: 14, margin: 0 }}>
+        <p style={{ color: summaryColor, fontSize: 14, margin: 0 }}>
           {widget.summary}
         </p>
       </div>
@@ -381,21 +360,3 @@ export default function AiDashboardWidget({
     </div>
   );
 }
-
-/**
- * rules for deciding whether a widget is small or large (to render 2 per row or 1 per row):
-
-**Cách hoạt động của `isSmallWidget()`:**
-
-| Loại           | Small (2 cái / dòng)                         | Large (1 cái / dòng) |
-|----------------|----------------------------------------------|----------------------|
-| **KPI**        | Luôn small                                   | —                    |
-| **Pie chart**  | ≤ 6 labels                                   | > 6 labels           |
-| **Bar chart**  | ≤ 6 labels + ≤ 2 datasets + ≤ 12 data points | Ngược lại            |
-| **Line chart** | ≤ 4 labels + 1 dataset                       | Ngược lại            |
-| **Table**      | ≤ 3 cột + ≤ 5 dòng                           | Ngược lại            |
-
-**Small widget**: render inline-flex 50% width, **không có summary card** riêng, chart title font nhỏ hơn (13px), chart height 200px, ẩn legend, font ticks 9px.
-
-**Large widget**: render full width, có summary card, chart title 18px, chart height 360px, hiển thị legend đầy đủ.
- */

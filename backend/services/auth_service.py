@@ -123,7 +123,7 @@ class AuthService:
             username=payload.username,
             email=payload.email,
             password_hash=hash_password(payload.password),
-            full_name=payload.full_name
+            full_name=payload.full_name,
         )
 
         # Auto-assign the default 'user' role on registration
@@ -138,7 +138,9 @@ class AuthService:
         return new_user
 
     @staticmethod
-    def login(payload: LoginRequest, response: Response, request: Request, db: Session) -> TokenResponse:
+    def login(
+        payload: LoginRequest, response: Response, request: Request, db: Session
+    ) -> TokenResponse:
         """Authenticate user and return tokens."""
         user = db.query(User).filter(User.email == payload.email).first()
         logger.info("Attempting to login user")
@@ -152,7 +154,11 @@ class AuthService:
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Account has been deleted",
             )
-        rf = db.query(RefreshToken).filter(RefreshToken.user_id == user.id, RefreshToken.revoked == False).first()
+        rf = (
+            db.query(RefreshToken)
+            .filter(RefreshToken.user_id == user.id, RefreshToken.revoked == False)
+            .first()
+        )
         if rf:
             rf.revoked = True
             db.commit()
@@ -170,7 +176,7 @@ class AuthService:
             expired_at=datetime.now(timezone.utc) + timedelta(days=7),
             ip_address=request.client.host if request.client else None,
             user_agent=request.headers.get("User-Agent") if request.headers else None,
-            created_at=datetime.now(timezone.utc)
+            created_at=datetime.now(timezone.utc),
         )
         db.add(db_token)
         # Update user's active status
@@ -192,7 +198,9 @@ class AuthService:
         return TokenResponse(access_token=access_token, refresh_token=None)
 
     @staticmethod
-    def refresh_access_token(response: Response, request: Request, refresh_token: str | None, db: Session) -> AccessTokenResponse:
+    def refresh_access_token(
+        response: Response, request: Request, refresh_token: str | None, db: Session
+    ) -> AccessTokenResponse:
         """Refresh access token using refresh token from cookie."""
         logger.info("Attempting to refresh access token")
         if not refresh_token:
@@ -209,7 +217,11 @@ class AuthService:
                     detail="Token type incorrect",
                 )
             jti = decoded.get("jti")
-            rf_in_db = db.query(RefreshToken).filter(RefreshToken.jti == jti, RefreshToken.revoked == False).first()
+            rf_in_db = (
+                db.query(RefreshToken)
+                .filter(RefreshToken.jti == jti, RefreshToken.revoked == False)
+                .first()
+            )
             if not rf_in_db:
                 raise HTTPException(
                     status_code=status.HTTP_401_UNAUTHORIZED,
@@ -233,8 +245,12 @@ class AuthService:
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Account has been deleted",
             )
-        new_access_token = create_access_token({"sub": user.email, "username": user.username})
-        new_refresh_token, new_jti = create_refresh_token({"sub": user.email, "username": user.username})
+        new_access_token = create_access_token(
+            {"sub": user.email, "username": user.username}
+        )
+        new_refresh_token, new_jti = create_refresh_token(
+            {"sub": user.email, "username": user.username}
+        )
         db_token = RefreshToken(
             user_id=user.id,
             jti=new_jti,
@@ -242,7 +258,7 @@ class AuthService:
             expired_at=datetime.now(timezone.utc) + timedelta(days=7),
             ip_address=request.client.host if request.client else None,
             user_agent=request.headers.get("User-Agent") if request.headers else None,
-            created_at=datetime.now(timezone.utc)
+            created_at=datetime.now(timezone.utc),
         )
         rf_in_db.revoked = True
         db.add(db_token)
@@ -268,7 +284,13 @@ class AuthService:
 
         # Update user's active status
         current_user.is_active = False
-        rf = db.query(RefreshToken).filter(RefreshToken.user_id == current_user.id, RefreshToken.revoked == False).first()
+        rf = (
+            db.query(RefreshToken)
+            .filter(
+                RefreshToken.user_id == current_user.id, RefreshToken.revoked == False
+            )
+            .first()
+        )
         if rf:
             rf.revoked = True
         db.commit()
@@ -281,7 +303,9 @@ class AuthService:
             now = datetime.now(timezone.utc)
             expire_time = datetime.fromtimestamp(exp, tz=timezone.utc) - now
             try:
-                redis_client.setex(f"blacklist:{jti}", int(expire_time.total_seconds()), "true")
+                redis_client.setex(
+                    f"blacklist:{jti}", int(expire_time.total_seconds()), "true"
+                )
             except redis.RedisError as e:
                 logger.error(f"Redis connection error during logout: {e}")
         except JWTError:

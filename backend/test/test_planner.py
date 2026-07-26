@@ -1,15 +1,12 @@
-
-import json
-import sys
-import os
 from langchain_nvidia_ai_endpoints import ChatNVIDIA
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
-from dashboard.query import analyze_dashboard_query
-# Add backend root to path so imports work
 
-from dotenv import load_dotenv
+client = ChatNVIDIA(
+    model="stepfun-ai/step-3.7-flash",
+    api_key="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",
+    temperature=1,
+    top_p=0.95,
+    max_completion_tokens=16384,
+)
 
-
-
-
-print(result)
+response = client.invoke("Hello There")
+print(response.content)

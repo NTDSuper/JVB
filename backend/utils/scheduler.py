@@ -1,4 +1,5 @@
 import logging
+
 logger = logging.getLogger(__name__)
 
 # Scheduler is no longer needed since MongoDB sync has been removed.

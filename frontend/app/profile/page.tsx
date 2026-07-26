@@ -3,7 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import api from "@/lib/api";
 import { User } from "@/types/dto";
-import ProtectedRoute from "@/components/ProtectedRouter";
+import { withProtection } from "@/components/ProtectedRouter";
 
 function getInitials(name?: string, username?: string): string {
   if (name) {
@@ -53,7 +53,7 @@ function FieldRow({ label, value }: FieldRowProps) {
   );
 }
 
-export default function ProfilePage() {
+function ProfilePage() {
   const { data: user, isLoading, error } = useQuery({
     queryKey: ["current-user"],
     queryFn: async () => {
@@ -65,7 +65,7 @@ export default function ProfilePage() {
   const initials = getInitials(user?.full_name, user?.username);
 
   return (
-    <ProtectedRoute>
+    <>
       <div className="page-container animate-fade-in">
         <div style={{ marginBottom: 28 }}>
           <h1 className="page-title">My Profile</h1>
@@ -124,6 +124,8 @@ export default function ProfilePage() {
           </div>
         </div>
       </div>
-    </ProtectedRoute>
+    </>
   );
 }
+
+export default withProtection(ProfilePage);

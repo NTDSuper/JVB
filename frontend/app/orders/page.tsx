@@ -6,8 +6,9 @@ import api from "@/lib/api";
 import Toast from "@/components/Toast";
 import { OrderList } from "@/types/dto";
 import { useState } from "react";
+import { withProtection } from "@/components/ProtectedRouter";
 
-export default function OrdersPage() {
+function OrdersPage() {
   const router = useRouter();
   const [toast, setToast] = useState<{
     message: string;
@@ -29,6 +30,8 @@ export default function OrdersPage() {
         return "badge-success";
       case "pending":
         return "badge-warning";
+      case "in_progress":
+        return "badge-info";
       case "cancelled":
       case "failed":
         return "badge-danger";
@@ -125,3 +128,5 @@ export default function OrdersPage() {
     </div>
   );
 }
+
+export default withProtection(OrdersPage, ["user"]);

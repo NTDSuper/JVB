@@ -24,8 +24,10 @@ import models.order_model
 import models.order_item_model
 
 import models.payment_model
+
 # Tool registry for chain.py lookup by name
 TOOLS = {}
+
 
 def _build_product_response(product):
     return {
@@ -39,49 +41,41 @@ def _build_product_response(product):
         "attributes": [
             {
                 "attribute_name": pav.attribute.name,
-                "value": (
-                    True
-                    if str(pav.value).lower() == "true"
-                    else pav.value
-                ),
+                "value": (True if str(pav.value).lower() == "true" else pav.value),
             }
             for pav in product.attribute_values
         ],
     }
 
+
 def format_product(products):
     if not products:
-        return "No products found."
+        return "Not Found."
 
     texts = []
 
     for product in products:
         attrs = "\n".join(
-            f"- {a['attribute_name']}: {a['value']}"
-            for a in product["attributes"]
+            f"  - {a['attribute_name']}: {a['value']}" for a in product["attributes"]
         )
 
         if not attrs:
-            attrs = "None"
+            attrs = "  - No attributes"
 
-        texts.append(
-            f"""
-Product:
-Name: {product['name']}
-Category: {product['category_name']}
-Price: {product['price']}
-Stock: {product['stock']}
-Description: {product['description']}
-Attributes:
-{attrs}
-""".strip()
-        )
+        product_id = product.get("id", "")
+        link_button = f'<a href="/products/{product_id}" class="chat-product-link" style="display:inline-block;margin-top:6px;padding:4px 12px;border-radius:6px;background:linear-gradient(135deg,#6366f1,#06b6d4);color:#fff;font-size:12px;font-weight:600;text-decoration:none">View Details →</a>'
+
+        texts.append(f"""• <strong>{product['name']}</strong>
+
+- Price: {product['price']}
+
+{link_button}""".strip())
 
     return "\n\n".join(texts)
 
 
 @tool
-def search_product(query: str) -> list[dict]:
+def search_product(query: str) -> str:
     """
     Search products from the supermarket database.
 
@@ -89,28 +83,22 @@ def search_product(query: str) -> list[dict]:
         Natural language query.
 
     Returns:
-        Relevant products with:
-        - name
-        - category
-        - price
-        - description
-        - attributes
-        - stock
+        Formatted text with product details and links.
     """
 
     # 1. Vector search
     product_ids = search_vector(query, top_k=5)
 
     if not product_ids:
-        return []
+        return "Not Found."
 
     # 2. Fetch full data from MySQL
     db = SessionLocal()
 
     try:
         products = db.query(Product).filter(Product.id.in_(product_ids)).all()
-
-        return [_build_product_response(p) for p in products];
+        product_dicts = [_build_product_response(p) for p in products]
+        return format_product(product_dicts)
 
     finally:
         db.close()

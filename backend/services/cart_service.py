@@ -72,7 +72,9 @@ class CartService:
         return CartService._build_cart_response(cart)
 
     @staticmethod
-    def add_to_cart(payload: AddToCartRequest, current_user: User, db: Session) -> CartResponse:
+    def add_to_cart(
+        payload: AddToCartRequest, current_user: User, db: Session
+    ) -> CartResponse:
         """Add a product to cart. If product already exists, increase quantity."""
         # Validate product exists, is active and not soft-deleted
         product = db.query(Product).filter(Product.id == payload.product_id).first()
@@ -83,7 +85,9 @@ class CartService:
         if product.status != "active":
             raise HTTPException(status_code=400, detail="Product is not available")
         if payload.quantity <= 0:
-            raise HTTPException(status_code=400, detail="Quantity must be greater than 0")
+            raise HTTPException(
+                status_code=400, detail="Quantity must be greater than 0"
+            )
         if product.stock < payload.quantity:
             raise HTTPException(
                 status_code=400,
@@ -95,7 +99,9 @@ class CartService:
         # Check if product already in cart
         existing_item = (
             db.query(CartItem)
-            .filter(CartItem.cart_id == cart.id, CartItem.product_id == payload.product_id)
+            .filter(
+                CartItem.cart_id == cart.id, CartItem.product_id == payload.product_id
+            )
             .first()
         )
 
@@ -125,20 +131,30 @@ class CartService:
         return CartService._build_cart_response(cart)
 
     @staticmethod
-    def update_cart_item(item_id: int, payload: UpdateCartItemRequest, current_user: User, db: Session) -> CartResponse:
+    def update_cart_item(
+        item_id: int, payload: UpdateCartItemRequest, current_user: User, db: Session
+    ) -> CartResponse:
         """Update quantity of a specific cart item."""
         cart = CartService._get_or_create_cart(current_user.id, db)
 
-        item = db.query(CartItem).filter(CartItem.id == item_id, CartItem.cart_id == cart.id).first()
+        item = (
+            db.query(CartItem)
+            .filter(CartItem.id == item_id, CartItem.cart_id == cart.id)
+            .first()
+        )
         if not item:
             raise HTTPException(status_code=404, detail="Cart item not found")
 
         if payload.quantity <= 0:
-            raise HTTPException(status_code=400, detail="Quantity must be greater than 0")
+            raise HTTPException(
+                status_code=400, detail="Quantity must be greater than 0"
+            )
 
         product = item.product
         if product.deleted_at is not None:
-            raise HTTPException(status_code=400, detail="Product is no longer available")
+            raise HTTPException(
+                status_code=400, detail="Product is no longer available"
+            )
         if product.stock < payload.quantity:
             raise HTTPException(
                 status_code=400,
@@ -157,7 +173,11 @@ class CartService:
         if not cart:
             raise HTTPException(status_code=404, detail="Cart not found")
 
-        item = db.query(CartItem).filter(CartItem.id == item_id, CartItem.cart_id == cart.id).first()
+        item = (
+            db.query(CartItem)
+            .filter(CartItem.id == item_id, CartItem.cart_id == cart.id)
+            .first()
+        )
         if not item:
             raise HTTPException(status_code=404, detail="Cart item not found")
 

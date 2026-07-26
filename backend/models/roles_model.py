@@ -13,18 +13,12 @@ class Role(Base):
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, nullable=False)
 
-    name: Mapped[str] = mapped_column(
-        String(50),
-        unique=True,
-        nullable=False
-    )
+    name: Mapped[str] = mapped_column(String(50), unique=True, nullable=False)
 
     description: Mapped[str | None] = mapped_column(String(255))
 
     created_at: Mapped[DateTime] = mapped_column(
-        DateTime,
-        server_default=func.now(),
-        nullable=False
+        DateTime, server_default=func.now(), nullable=False
     )
 
     users = relationship(

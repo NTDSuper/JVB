@@ -6,22 +6,18 @@ from typing import Any, Dict, List, Literal, Optional
 
 from pydantic import BaseModel, Field, RootModel
 
-
 # ── Planner ──────────────────────────────────────────────────────────────────
 
+
 class PlannerTask(BaseModel):
-    tool: Literal["sql"] = Field(
-        description="Tool used to execute the task."
-    )
+    tool: Literal["sql"] = Field(description="Tool used to execute the task.")
     display: Literal["table", "chart", "kpi"] = Field(
         description="Frontend display type."
     )
     chart_type: Literal["bar", "line", "pie", "none"] = Field(
         description="Chart type. Use 'none' if display is not chart."
     )
-    question: str = Field(
-        description="Natural language query for the SQL agent."
-    )
+    question: str = Field(description="Natural language query for the SQL agent.")
 
 
 class PlannerOutput(RootModel[List[PlannerTask]]):
@@ -30,9 +26,10 @@ class PlannerOutput(RootModel[List[PlannerTask]]):
 
 # ── Formatter ────────────────────────────────────────────────────────────────
 
+
 class ChartDataset(BaseModel):
     label: str
-    data: List[float]
+    data: List[float | None]
 
     # Dataset colors
     backgroundColor: Any = None
@@ -66,10 +63,7 @@ class ChartLegend(BaseModel):
 
 class ChartOptions(BaseModel):
     legend: ChartLegend = ChartLegend()
-    scales: Dict[str, ChartAxis] = {
-        "x": ChartAxis(),
-        "y": ChartAxis()
-    }
+    scales: Dict[str, ChartAxis] = {"x": ChartAxis(), "y": ChartAxis()}
 
 
 class ChartData(BaseModel):
@@ -89,7 +83,9 @@ class DashboardOutput(BaseModel):
     table: List[Dict[str, Any]]
     chart: Optional[Chart] = None
 
+
 # ── Query Analysis ────────────────────────────────────────────────────────────
+
 
 class QueryOption(BaseModel):
     """
@@ -100,6 +96,7 @@ class QueryOption(BaseModel):
     - context: longer explanation of what this adds
     - suggestion: the text snippet to append to the original question
     """
+
     id: str
     label: str
     context: str
@@ -114,8 +111,12 @@ class QueryAnalysis(BaseModel):
     - reason: explanation of why it's clear or what's missing
     - enhanced_question: the original question with selected options appended
     - options: list of suggested enhancements the user can pick from
+    - chatbot_response: if the question is off-topic (not about business data),
+      this contains a friendly chatbot answer; otherwise empty.
     """
+
     clear: bool
     reason: str
     enhanced_question: str = ""
     options: list[QueryOption] = []
+    chatbot_response: str = ""

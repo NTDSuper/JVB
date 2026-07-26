@@ -1,14 +1,15 @@
 import os
 
 from dotenv import load_dotenv
-from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_deepseek import ChatDeepSeek
 from ai.tool import TOOLS
 
 load_dotenv()
 
-llm = ChatGoogleGenerativeAI(
-    model="gemini-2.5-flash",
-    temperature=0,
+llm = ChatDeepSeek(
+    model="deepseek-chat",
+    temperature=0.6,
+    top_p=0.95,
 ).bind_tools(TOOLS)
 
 # API_KEY = os.getenv("NVIDIA_API_KEY")

@@ -12,30 +12,28 @@ load_dotenv()
 # Planner LLM
 # =========================
 planner_llm = ChatNVIDIA(
-  model="qwen/qwen3.5-397b-a17b",
-  api_key=os.getenv("NVIDIA_API_KEY"),
-  temperature=0.6,
-  top_p=0.95,
-  max_completion_tokens=16384,
+    model="qwen/qwen3.5-397b-a17b",
+    api_key=os.getenv("NVIDIA_API_KEY"),
+    temperature=0.6,
+    top_p=0.95,
+    max_completion_tokens=16384,
 )
 
 # =========================
 # SQL Agent LLM
 # =========================
 sql_llm = ChatNVIDIA(
-  model="qwen/qwen3.5-397b-a17b",
-  api_key=os.getenv("NVIDIA_API_KEY"),
-  temperature=0.6,
-  top_p=0.95,
-  max_completion_tokens=16384,
+    model="qwen/qwen3.5-397b-a17b",
+    api_key=os.getenv("NVIDIA_API_KEY"),
+    temperature=0.6,
+    top_p=0.95,
+    max_completion_tokens=16384,
 )
 
 # =========================
 # Database
 # =========================
-db = SQLDatabase.from_uri(
-    os.getenv("DATABASE_URL")
-)
+db = SQLDatabase.from_uri(os.getenv("DATABASE_URL"))
 
 # =========================
 # SQL Agent
@@ -44,9 +42,7 @@ sql_agent = create_sql_agent(
     llm=sql_llm,
     db=db,
     verbose=True,
-    agent_executor_kwargs={
-        "handle_parsing_errors": True
-    }
+    agent_executor_kwargs={"handle_parsing_errors": True},
 )
 
 # =========================
@@ -84,15 +80,13 @@ print("=" * 50)
 # =========================
 # Step 2: SQL Agent
 # =========================
-response = sql_agent.invoke({
-    "input": planner_output
-})
+response = sql_agent.invoke({"input": planner_output})
 
 print("=" * 50)
 print("Final Response")
 print(response["output"])
 
-#Output
+# Output
 # ==================================================
 # Planner Output
 # Please retrieve a comprehensive general report containing summary statistics and key metrics for all available data.
@@ -106,9 +100,9 @@ print(response["output"])
 # Action: sql_db_schema
 # Action Input: "users, products, orders, order_items, categories, carts, payments"
 # CREATE TABLE carts (
-#         id BIGINT NOT NULL AUTO_INCREMENT, 
-#         user_id BIGINT NOT NULL, 
-#         PRIMARY KEY (id), 
+#         id BIGINT NOT NULL AUTO_INCREMENT,
+#         user_id BIGINT NOT NULL,
+#         PRIMARY KEY (id),
 #         CONSTRAINT carts_ibfk_1 FOREIGN KEY(user_id) REFERENCES users (id)
 # )COLLATE utf8mb4_0900_ai_ci ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
 
@@ -120,10 +114,10 @@ print(response["output"])
 
 
 # CREATE TABLE categories (
-#         id BIGINT NOT NULL AUTO_INCREMENT, 
-#         name VARCHAR(100) NOT NULL, 
-#         slug VARCHAR(100) NOT NULL, 
-#         description TEXT, 
+#         id BIGINT NOT NULL AUTO_INCREMENT,
+#         name VARCHAR(100) NOT NULL,
+#         slug VARCHAR(100) NOT NULL,
+#         description TEXT,
 #         PRIMARY KEY (id)
 # )COLLATE utf8mb4_0900_ai_ci ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
 
@@ -137,13 +131,13 @@ print(response["output"])
 
 
 # CREATE TABLE order_items (
-#         id BIGINT NOT NULL AUTO_INCREMENT, 
-#         order_id BIGINT NOT NULL, 
-#         product_id BIGINT NOT NULL, 
-#         quantity BIGINT NOT NULL, 
-#         price DECIMAL(10, 2) NOT NULL, 
-#         PRIMARY KEY (id), 
-#         CONSTRAINT order_items_ibfk_1 FOREIGN KEY(order_id) REFERENCES orders (id), 
+#         id BIGINT NOT NULL AUTO_INCREMENT,
+#         order_id BIGINT NOT NULL,
+#         product_id BIGINT NOT NULL,
+#         quantity BIGINT NOT NULL,
+#         price DECIMAL(10, 2) NOT NULL,
+#         PRIMARY KEY (id),
+#         CONSTRAINT order_items_ibfk_1 FOREIGN KEY(order_id) REFERENCES orders (id),
 #         CONSTRAINT order_items_ibfk_2 FOREIGN KEY(product_id) REFERENCES products (id)
 # )COLLATE utf8mb4_0900_ai_ci ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
 
@@ -157,11 +151,11 @@ print(response["output"])
 
 
 # CREATE TABLE orders (
-#         id BIGINT NOT NULL AUTO_INCREMENT, 
-#         user_id BIGINT NOT NULL, 
-#         total_amount DECIMAL(10, 2) NOT NULL, 
-#         status VARCHAR(255) NOT NULL, 
-#         PRIMARY KEY (id), 
+#         id BIGINT NOT NULL AUTO_INCREMENT,
+#         user_id BIGINT NOT NULL,
+#         total_amount DECIMAL(10, 2) NOT NULL,
+#         status VARCHAR(255) NOT NULL,
+#         PRIMARY KEY (id),
 #         CONSTRAINT orders_ibfk_1 FOREIGN KEY(user_id) REFERENCES users (id)
 # )COLLATE utf8mb4_0900_ai_ci ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
 
@@ -175,14 +169,14 @@ print(response["output"])
 
 
 # CREATE TABLE payments (
-#         id BIGINT NOT NULL AUTO_INCREMENT, 
-#         order_id BIGINT NOT NULL, 
-#         method VARCHAR(255) NOT NULL, 
-#         amount DECIMAL(10, 2) NOT NULL, 
-#         status VARCHAR(50) NOT NULL, 
-#         expires_at DATETIME, 
-#         paid_at DATETIME, 
-#         PRIMARY KEY (id), 
+#         id BIGINT NOT NULL AUTO_INCREMENT,
+#         order_id BIGINT NOT NULL,
+#         method VARCHAR(255) NOT NULL,
+#         amount DECIMAL(10, 2) NOT NULL,
+#         status VARCHAR(50) NOT NULL,
+#         expires_at DATETIME,
+#         paid_at DATETIME,
+#         PRIMARY KEY (id),
 #         CONSTRAINT payments_ibfk_1 FOREIGN KEY(order_id) REFERENCES orders (id)
 # )COLLATE utf8mb4_0900_ai_ci ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
 
@@ -196,20 +190,20 @@ print(response["output"])
 
 
 # CREATE TABLE products (
-#         id BIGINT NOT NULL AUTO_INCREMENT, 
-#         category_id BIGINT, 
-#         sku VARCHAR(100) NOT NULL, 
-#         name VARCHAR(255) NOT NULL, 
-#         slug VARCHAR(255) NOT NULL, 
-#         description TEXT, 
-#         price DECIMAL(10, 2) NOT NULL, 
-#         cost_price DECIMAL(10, 2), 
-#         stock INTEGER NOT NULL, 
-#         status ENUM('active','inactive','archived') NOT NULL, 
-#         image_url VARCHAR(255), 
-#         created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, 
-#         deleted_at DATETIME, 
-#         PRIMARY KEY (id), 
+#         id BIGINT NOT NULL AUTO_INCREMENT,
+#         category_id BIGINT,
+#         sku VARCHAR(100) NOT NULL,
+#         name VARCHAR(255) NOT NULL,
+#         slug VARCHAR(255) NOT NULL,
+#         description TEXT,
+#         price DECIMAL(10, 2) NOT NULL,
+#         cost_price DECIMAL(10, 2),
+#         stock INTEGER NOT NULL,
+#         status ENUM('active','inactive','archived') NOT NULL,
+#         image_url VARCHAR(255),
+#         created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+#         deleted_at DATETIME,
+#         PRIMARY KEY (id),
 #         CONSTRAINT products_ibfk_1 FOREIGN KEY(category_id) REFERENCES categories (id)
 # )COLLATE utf8mb4_0900_ai_ci ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
 
@@ -223,14 +217,14 @@ print(response["output"])
 
 
 # CREATE TABLE users (
-#         id BIGINT NOT NULL AUTO_INCREMENT, 
-#         username VARCHAR(50) NOT NULL, 
-#         email VARCHAR(100) NOT NULL, 
-#         password_hash VARCHAR(255) NOT NULL, 
-#         full_name VARCHAR(100), 
-#         is_active TINYINT(1) NOT NULL, 
-#         created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, 
-#         deleted_at DATETIME, 
+#         id BIGINT NOT NULL AUTO_INCREMENT,
+#         username VARCHAR(50) NOT NULL,
+#         email VARCHAR(100) NOT NULL,
+#         password_hash VARCHAR(255) NOT NULL,
+#         full_name VARCHAR(100),
+#         is_active TINYINT(1) NOT NULL,
+#         created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+#         deleted_at DATETIME,
 #         PRIMARY KEY (id)
 # )COLLATE utf8mb4_0900_ai_ci ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
 

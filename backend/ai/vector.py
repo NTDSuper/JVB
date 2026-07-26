@@ -13,17 +13,16 @@ except Exception as e:
     print(f"[WARN] Qdrant not available at localhost:6333 - {e}")
     client = None
 
-embeddings = GoogleGenerativeAIEmbeddings(
-    model="gemini-embedding-001"
-)
+embeddings = GoogleGenerativeAIEmbeddings(model="gemini-embedding-001")
+
 
 def embedding_fn(text: str):
     return embeddings.embed_query(text)
 
+
 def build_product_text(product):
     attrs = ", ".join(
-        f"{attr['attribute_name']}: {attr['value']}"
-        for attr in product["attributes"]
+        f"{attr['attribute_name']}: {attr['value']}" for attr in product["attributes"]
     )
 
     if not attrs:
@@ -37,7 +36,8 @@ def build_product_text(product):
         f"Attributes: {attrs}"
     )
 
-def upsert_product_to_qdrant(product,embedding_fn):
+
+def upsert_product_to_qdrant(product, embedding_fn):
 
     # 1. tạo text để embed
     text = build_product_text(product)
@@ -57,9 +57,9 @@ def upsert_product_to_qdrant(product,embedding_fn):
                     "name": product["name"],
                     "category": product["category_name"],
                     "price": product["price"],
-                }
+                },
             )
-        ]
+        ],
     )
 
 
@@ -67,10 +67,7 @@ def index_all_products(products, embedding_fn):
 
     for p in products:
 
-        upsert_product_to_qdrant(
-            product=p,
-            embedding_fn=embedding_fn
-        )
+        upsert_product_to_qdrant(product=p, embedding_fn=embedding_fn)
 
 
 def search_vector(query: str, top_k=5):
@@ -83,7 +80,4 @@ def search_vector(query: str, top_k=5):
         limit=top_k,
     ).points
 
-    return [
-        h.payload["product_id"]
-        for h in hits
-    ]
+    return [h.payload["product_id"] for h in hits]

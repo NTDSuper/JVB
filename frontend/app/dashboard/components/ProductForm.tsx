@@ -2,6 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import api from "@/lib/api";
+import ImageUpload from "@/components/ImageUpload";
 import { Product, Category, Attribute } from "@/types/dto";
 
 interface ProductFormProps {
@@ -172,15 +173,16 @@ export default function ProductForm({
           />
         </label>
 
-        <label>
-          <span className="form-label">Image URL</span>
-          <input
-            value={formData.image_url || ""}
-            onChange={(e) => onChange("image_url", e.target.value)}
-            className="form-input"
-            placeholder="https://..."
+        <div style={{ gridColumn: "1 / -1" }}>
+          <span className="form-label">Product Image</span>
+          <ImageUpload
+            currentImage={formData.image_url}
+            isObjectKey={true}
+            onUploadSuccess={(objectKey) => onChange("image_url", objectKey)}
+            onUploadError={(error) => console.error("Image upload error:", error)}
+            disabled={busy}
           />
-        </label>
+        </div>
 
         {categoryAttributes.map((attr) => (
           <label key={attr.id}>

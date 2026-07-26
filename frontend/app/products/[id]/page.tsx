@@ -4,14 +4,20 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import api from "@/lib/api";
-import ProtectedRoute from "@/components/ProtectedRouter";
 import Toast from "@/components/Toast";
 import { Product } from "@/types/dto";
+import { getS3PublicUrl } from "@/lib/s3-url";
+import { useAuthContext } from "@/auth/contexts/AuthContext";
 
 export default function ProductDetailPage() {
   const params = useParams();
   const router = useRouter();
   const queryClient = useQueryClient();
+  const { isAuthenticated, user } = useAuthContext();
+  const userRoles = user ? (Array.isArray(user.role) ? user.role : [user.role]) : [];
+  const isManagerOrAdmin = userRoles.some((r) => r === "manager" || r === "admin");
+  const isBuyer = userRoles.includes("user");
+  const showAddToCartSection = isAuthenticated ? isBuyer : true; // Guest sees (redirects), Manager/Admin don't see
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
   const [quantity, setQuantity] = useState(1);
@@ -37,6 +43,28 @@ export default function ProductDetailPage() {
 
   const addToCart = async () => {
     if (!product) return;
+
+    if (!isAuthenticated) {
+      setToast({
+        message: "Vui lòng đăng nhập để thêm sản phẩm vào giỏ hàng.",
+        type: "info",
+      });
+      const currentPath = typeof window !== "undefined" ? window.location.pathname : `/products/${params.id}`;
+      setTimeout(() => {
+        router.push(`/login?redirect=${encodeURIComponent(currentPath)}`);
+      }, 600);
+      return;
+    }
+
+    const userRoles = Array.isArray(user?.role) ? user.role : user?.role ? [user.role] : [];
+    if (userRoles.length > 0 && !userRoles.includes("user")) {
+      setToast({
+        message: "Chỉ tài khoản khách hàng (user) mới có thể thêm sản phẩm vào giỏ hàng.",
+        type: "error",
+      });
+      return;
+    }
+
     try {
       setAdding(true);
       await api.post("/cart/add", {
@@ -61,39 +89,35 @@ export default function ProductDetailPage() {
 
   if (loading) {
     return (
-      <ProtectedRoute>
-        <div className="page-container">
-          <div style={{ display: "flex", gap: 32, flexWrap: "wrap" }}>
-            <div className="skeleton" style={{ width: 400, height: 400, borderRadius: 16 }} />
-            <div style={{ flex: 1, minWidth: 300 }}>
-              <div className="skeleton" style={{ height: 32, width: "70%", marginBottom: 16 }} />
-              <div className="skeleton" style={{ height: 40, width: "30%", marginBottom: 24 }} />
-              <div className="skeleton" style={{ height: 100, marginBottom: 16 }} />
-            </div>
+      <div className="page-container">
+        <div style={{ display: "flex", gap: 32, flexWrap: "wrap" }}>
+          <div className="skeleton" style={{ width: 400, height: 400, borderRadius: 16 }} />
+          <div style={{ flex: 1, minWidth: 300 }}>
+            <div className="skeleton" style={{ height: 32, width: "70%", marginBottom: 16 }} />
+            <div className="skeleton" style={{ height: 40, width: "30%", marginBottom: 24 }} />
+            <div className="skeleton" style={{ height: 100, marginBottom: 16 }} />
           </div>
         </div>
-      </ProtectedRoute>
+      </div>
     );
   }
 
   if (!product) {
     return (
-      <ProtectedRoute>
-        <div className="page-container">
-          <div className="empty-state">
-            <div className="empty-state-icon">❌</div>
-            <div className="empty-state-title">Product not found</div>
-            <button className="btn btn-primary" onClick={() => router.push("/products")}>
-              Back to Products
-            </button>
-          </div>
+      <div className="page-container">
+        <div className="empty-state">
+          <div className="empty-state-icon">❌</div>
+          <div className="empty-state-title">Product not found</div>
+          <button className="btn btn-primary" onClick={() => router.push("/products")}>
+            Back to Products
+          </button>
         </div>
-      </ProtectedRoute>
+      </div>
     );
   }
 
   return (
-    <ProtectedRoute>
+    <>
       <div className="page-container animate-fade-in">
         {/* Back */}
         <button
@@ -109,7 +133,7 @@ export default function ProductDetailPage() {
           <div style={{ flex: "0 0 auto", width: 400, maxWidth: "100%" }}>
             {product.image_url ? (
               <img
-                src={product.image_url}
+                src={getS3PublicUrl(product.image_url) || ""}
                 alt={product.name}
                 style={{
                   width: "100%",
@@ -253,8 +277,8 @@ export default function ProductDetailPage() {
               )}
             </div>
 
-            {/* Add to cart */}
-            {product.status === "active" && product.stock > 0 && (
+            {/* Add to cart - hidden for Manager/Admin */}
+            {showAddToCartSection && product.status === "active" && product.stock > 0 && (
               <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                 <div className="qty-stepper">
                   <button
@@ -301,6 +325,6 @@ export default function ProductDetailPage() {
           onClose={() => setToast(null)}
         />
       )}
-    </ProtectedRoute>
+    </>
   );
 }

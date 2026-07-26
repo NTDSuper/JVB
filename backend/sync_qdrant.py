@@ -37,7 +37,7 @@ logger = logging.getLogger(__name__)
 _qdrant_client = QdrantClient(url="http://localhost:6333")
 
 COLLECTION_NAME = "products"
-VECTOR_SIZE = 3072  
+VECTOR_SIZE = 3072
 _qdrant_client.delete_collection("products")
 existing = _qdrant_client.get_collections()
 collection_names = [c.name for c in existing.collections]
@@ -46,14 +46,15 @@ if COLLECTION_NAME not in collection_names:
         collection_name=COLLECTION_NAME,
         vectors_config=VectorParams(size=VECTOR_SIZE, distance=Distance.COSINE),
     )
-    logger.info("Created Qdrant collection '%s' (vector size=%d).", COLLECTION_NAME, VECTOR_SIZE)
+    logger.info(
+        "Created Qdrant collection '%s' (vector size=%d).", COLLECTION_NAME, VECTOR_SIZE
+    )
 
 
 def build_product_text(product):
     """Format product text for embedding - standardized format."""
     attrs = ", ".join(
-        f"{attr['attribute_name']}: {attr['value']}"
-        for attr in product["attributes"]
+        f"{attr['attribute_name']}: {attr['value']}" for attr in product["attributes"]
     )
 
     if not attrs:
@@ -68,14 +69,11 @@ def build_product_text(product):
     )
 
 
-
-
 # ---------- Data fetching ----------
 def fetch_products() -> list[dict]:
     """Read all products from DB with category & attributes."""
     with engine.connect() as conn:
-        rows = conn.execute(
-            text("""
+        rows = conn.execute(text("""
                 SELECT
                     p.id,
                     p.sku,
@@ -90,11 +88,9 @@ def fetch_products() -> list[dict]:
                     c.name AS category_name
                 FROM products p
                 JOIN categories c ON c.id = p.category_id
-            """)
-        ).mappings().fetchall()
+            """)).mappings().fetchall()
 
-        attr_rows = conn.execute(
-            text("""
+        attr_rows = conn.execute(text("""
                 SELECT
                     pav.product_id,
                     a.id    AS attribute_id,
@@ -103,34 +99,37 @@ def fetch_products() -> list[dict]:
                     pav.value
                 FROM product_attribute_values pav
                 JOIN attributes a ON a.id = pav.attribute_id
-            """)
-        ).mappings().fetchall()
+            """)).mappings().fetchall()
 
     attr_by_product: dict[int, list[dict]] = {}
     for r in attr_rows:
-        attr_by_product.setdefault(r["product_id"], []).append({
-            "attribute_id": r["attribute_id"],
-            "attribute_name": r["attribute_name"],
-            "data_type": r["data_type"],
-            "value": r["value"],
-        })
+        attr_by_product.setdefault(r["product_id"], []).append(
+            {
+                "attribute_id": r["attribute_id"],
+                "attribute_name": r["attribute_name"],
+                "data_type": r["data_type"],
+                "value": r["value"],
+            }
+        )
 
     products = []
     for r in rows:
-        products.append({
-            "id": r["id"],
-            "sku": r["sku"],
-            "name": r["name"],
-            "description": r["description"] or "",
-            "price": float(r["price"]),
-            "cost_price": float(r["cost_price"]) if r["cost_price"] else None,
-            "category_id": r["category_id"],
-            "stock": r["stock"],
-            "image_url": r["image_url"],
-            "status": r["status"],
-            "category_name": r["category_name"],
-            "attributes": attr_by_product.get(r["id"], []),
-        })
+        products.append(
+            {
+                "id": r["id"],
+                "sku": r["sku"],
+                "name": r["name"],
+                "description": r["description"] or "",
+                "price": float(r["price"]),
+                "cost_price": float(r["cost_price"]) if r["cost_price"] else None,
+                "category_id": r["category_id"],
+                "stock": r["stock"],
+                "image_url": r["image_url"],
+                "status": r["status"],
+                "category_name": r["category_name"],
+                "attributes": attr_by_product.get(r["id"], []),
+            }
+        )
 
     return products
 
@@ -164,7 +163,9 @@ def run_cron(hour: int = 2, minute: int = 0):
         name="Daily sync products to Qdrant",
     )
 
-    logger.info("Cron job scheduled daily at %02d:%02d. Press Ctrl+C to stop.", hour, minute)
+    logger.info(
+        "Cron job scheduled daily at %02d:%02d. Press Ctrl+C to stop.", hour, minute
+    )
     logger.info("Running first sync now...")
     sync_products_to_qdrant()
 
@@ -187,7 +188,9 @@ def run_interval(interval_minutes: int = 30):
         next_run_time=datetime.now(),
     )
 
-    logger.info("Sync scheduled every %d minutes. Press Ctrl+C to stop.", interval_minutes)
+    logger.info(
+        "Sync scheduled every %d minutes. Press Ctrl+C to stop.", interval_minutes
+    )
     try:
         scheduler.start()
     except KeyboardInterrupt:

@@ -22,6 +22,7 @@ export interface User {
   email: string;
   full_name?: string;
   is_active: boolean;
+  role: string[];
   created_at?: string;
 }
 
@@ -30,6 +31,13 @@ export interface UserAdminUpdate {
   email?: string;
   full_name?: string;
   is_active?: boolean;
+  role?: string;
+}
+
+export interface Role {
+  id: number;
+  name: string;
+  description?: string;
 }
 
 // ── Product ──
@@ -121,6 +129,13 @@ export interface OrderList {
   item_count: number;
 }
 
+export interface OrderListPaginatedResponse {
+  items: OrderList[];
+  total: number;
+  skip: number;
+  limit: number;
+}
+
 export interface CheckoutRequest {
   payment_method: string;
 }
@@ -134,6 +149,7 @@ export interface Payment {
   status: string;
   expires_at?: string;
   paid_at?: string;
+  refund_at?: string;
 }
 
 export interface PaymentResult {

@@ -6,27 +6,17 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 class CartItem(Base):
     __tablename__ = "cart_items"
 
-    id: Mapped[int] = mapped_column(
-        BigInteger,
-        primary_key=True
-    )
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
 
     cart_id: Mapped[int] = mapped_column(
-        BigInteger,
-        ForeignKey("carts.id"),
-        nullable=False
+        BigInteger, ForeignKey("carts.id"), nullable=False
     )
 
     product_id: Mapped[int] = mapped_column(
-        BigInteger,
-        ForeignKey("products.id"),
-        nullable=False
+        BigInteger, ForeignKey("products.id"), nullable=False
     )
 
-    quantity: Mapped[int] = mapped_column(
-        BigInteger,
-        nullable=False
-    )
+    quantity: Mapped[int] = mapped_column(BigInteger, nullable=False)
 
     # Relationships
     cart = relationship("Cart", back_populates="items")

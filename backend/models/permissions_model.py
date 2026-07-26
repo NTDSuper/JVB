@@ -11,23 +11,14 @@ class Permission(Base):
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
 
-    name: Mapped[str] = mapped_column(
-        String(100),
-        nullable=False
-    )
+    name: Mapped[str] = mapped_column(String(100), nullable=False)
 
-    code: Mapped[str] = mapped_column(
-        String(100),
-        unique=True,
-        nullable=False
-    )
+    code: Mapped[str] = mapped_column(String(100), unique=True, nullable=False)
 
     description: Mapped[str | None] = mapped_column(String(255))
 
     created_at: Mapped[DateTime] = mapped_column(
-        DateTime,
-        server_default=func.now(),
-        nullable=False
+        DateTime, server_default=func.now(), nullable=False
     )
 
     roles = relationship(

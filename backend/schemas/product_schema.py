@@ -6,6 +6,7 @@ from typing import Optional, Any
 
 class ProductAttributeInput(BaseModel):
     """Dùng name (string) thay vì attribute_id - backend tự map."""
+
     name: str
     value: str
 

@@ -5,12 +5,14 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 import api from "@/lib/api";
 import { Product } from "@/types/dto";
-import ProtectedRoute from "@/components/ProtectedRouter";
+import { withProtection } from "@/components/ProtectedRouter";
 import SummaryCard from "./components/SummaryCard";
 import Chart from "./components/Chart";
 import Table from "./components/Table";
 import ProductForm from "./components/ProductForm";
 import DeleteModal from "./components/DeleteModal";
+
+const PAGE_SIZE = 20;
 
 const emptyProduct: Partial<Product> = {
   sku: "",
@@ -49,7 +51,7 @@ function buildProductPayload(data: Partial<Product>) {
   return payload;
 }
 
-export default function DashboardPage() {
+function DashboardPage() {
   const queryClient = useQueryClient();
   const [formData, setFormData] = useState<Partial<Product>>(emptyProduct);
   const [editing, setEditing] = useState(false);
@@ -57,15 +59,45 @@ export default function DashboardPage() {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [page, setPage] = useState(0);
 
-  const { data: products = [], isLoading } = useQuery({
-    queryKey: ["dashboard-products"],
+  // Fetch all products for summary stats (entire supermarket)
+  const { data: summaryData, isLoading: summaryLoading } = useQuery({
+    queryKey: ["dashboard-summary"],
     queryFn: async () => {
-      const response = await api.get<Product[]>("/products/all?skip=0&limit=20");
+      const response = await api.get<{ items: Product[]; total: number }>(
+        "/products/all?skip=0&limit=1000"
+      );
       return response.data;
     },
     staleTime: 1000 * 60 * 1,
   });
+
+  // Fetch paginated products for the table
+  const { data, isLoading: tableLoading } = useQuery({
+    queryKey: ["dashboard-products", page],
+    queryFn: async () => {
+      const skip = page * PAGE_SIZE;
+      const response = await api.get<{ items: Product[]; total: number; skip: number; limit: number }>(
+        `/products/all?skip=${skip}&limit=${PAGE_SIZE}`
+      );
+      return response.data;
+    },
+    staleTime: 1000 * 60 * 1,
+  });
+
+  const products = data?.items ?? [];
+  const totalProducts = data?.total ?? 0;
+  const totalPages = Math.ceil(totalProducts / PAGE_SIZE);
+
+  // Summary stats across ALL products
+  const allProducts = summaryData?.items ?? [];
+  const totalAllProducts = summaryData?.total ?? 0;
+  const totalAllStock = allProducts.reduce((sum, item) => sum + item.stock, 0);
+  const totalActiveProducts = allProducts.filter((item) => item.status === "active").length;
+  const totalLowStock = allProducts.filter((item) => item.stock > 0 && item.stock <= 10).length;
+
+  const isLoading = summaryLoading || tableLoading;
 
   const handleChange = (field: keyof Product, value: string | number | undefined) => {
     setFormData((prev) => ({
@@ -164,12 +196,40 @@ export default function DashboardPage() {
     }
   };
 
-  const totalStock = products.reduce((sum, item) => sum + item.stock, 0);
-  const activeProducts = products.filter((item) => item.status === "active").length;
-  const lowStock = products.filter((item) => item.stock > 0 && item.stock <= 10).length;
+  const handlePreviousPage = () => {
+    setPage((prev) => Math.max(0, prev - 1));
+  };
+
+  const handleNextPage = () => {
+    setPage((prev) => Math.min(totalPages - 1, prev + 1));
+  };
+
+  // Generate page number buttons (show max 5 pages around current)
+  const getPageNumbers = (): (number | "...")[] => {
+    const pages: (number | "...")[] = [];
+    if (totalPages <= 7) {
+      for (let i = 0; i < totalPages; i++) pages.push(i);
+    } else {
+      pages.push(0);
+      let start = Math.max(1, page - 2);
+      let end = Math.min(totalPages - 2, page + 2);
+      if (page <= 2) {
+        start = 1;
+        end = 4;
+      } else if (page >= totalPages - 3) {
+        start = totalPages - 5;
+        end = totalPages - 2;
+      }
+      if (start > 1) pages.push("...");
+      for (let i = start; i <= end; i++) pages.push(i);
+      if (end < totalPages - 2) pages.push("...");
+      pages.push(totalPages - 1);
+    }
+    return pages;
+  };
 
   return (
-    <ProtectedRoute roles = {["admin", "manager"]}>
+    <>
       <div className="page-container">
         <div className="section-header">
           <div>
@@ -178,9 +238,6 @@ export default function DashboardPage() {
               Create products, monitor inventory, and keep the catalog tidy.
             </p>
           </div>
-          <button className="btn btn-ghost" onClick={() => queryClient.invalidateQueries({ queryKey: ["dashboard-products"] })} disabled={isLoading || saving}>
-            Refresh
-          </button>
         </div>
 
         {error && (
@@ -197,10 +254,14 @@ export default function DashboardPage() {
         )}
 
         <div className="dashboard-grid" style={{ marginBottom: 18 }}>
-          <SummaryCard title="Products" value={isLoading ? "..." : products.length} hint="Loaded catalog rows" />
-          <SummaryCard title="Total Stock" value={isLoading ? "..." : totalStock} hint="Units available" />
-          <SummaryCard title="Active Products" value={isLoading ? "..." : activeProducts} hint="Visible to shoppers" />
-          <SummaryCard title="Low Stock" value={isLoading ? "..." : lowStock} hint="10 units or fewer" />
+          <SummaryCard title="Products" value={isLoading ? "..." : totalAllProducts} hint="Total catalog rows" />
+          <SummaryCard title="Total Stock" value={isLoading ? "..." : totalAllStock} hint="Units across all products" />
+          <SummaryCard title="Active Products" value={isLoading ? "..." : totalActiveProducts} hint="Visible to shoppers" />
+          <SummaryCard title="Low Stock" value={isLoading ? "..." : totalLowStock} hint="10 units or fewer" />
+        </div>
+
+        <div style={{ marginBottom: 18 }}>
+          <Chart />
         </div>
 
         <div style={{ marginBottom: 18 }}>
@@ -214,7 +275,6 @@ export default function DashboardPage() {
           />
         </div>
 
-
         {isLoading ? (
           <div className="card">
             <div className="skeleton" style={{ height: 56, marginBottom: 12 }} />
@@ -222,7 +282,55 @@ export default function DashboardPage() {
             <div className="skeleton" style={{ height: 56 }} />
           </div>
         ) : (
-          <Table products={products} onEdit={handleEdit} onDelete={handleDeleteClick} />
+          <>
+            <Table products={products} onEdit={handleEdit} onDelete={handleDeleteClick} />
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="pagination">
+                <button
+                  className="pagination-btn"
+                  onClick={handlePreviousPage}
+                  disabled={page === 0}
+                >
+                  &laquo; Previous
+                </button>
+
+                <div className="pagination-pages">
+                  {getPageNumbers().map((p, idx) =>
+                    p === "..." ? (
+                      <span key={`ellipsis-${idx}`} className="pagination-ellipsis">
+                        ...
+                      </span>
+                    ) : (
+                      <button
+                        key={p}
+                        className={`pagination-page-btn ${p === page ? "active" : ""}`}
+                        onClick={() => setPage(p)}
+                      >
+                        {p + 1}
+                      </button>
+                    )
+                  )}
+                </div>
+
+                <button
+                  className="pagination-btn"
+                  onClick={handleNextPage}
+                  disabled={page >= totalPages - 1}
+                >
+                  Next &raquo;
+                </button>
+              </div>
+            )}
+
+            {/* Page info */}
+            {totalProducts > 0 && (
+              <div style={{ textAlign: "center", fontSize: 13, color: "var(--text-muted)", marginTop: 12 }}>
+                Page {page + 1} of {totalPages}
+              </div>
+            )}
+          </>
         )}
 
         <DeleteModal
@@ -231,6 +339,8 @@ export default function DashboardPage() {
           onConfirm={handleDeleteConfirm}
         />
       </div>
-    </ProtectedRoute>
+    </>
   );
 }
+
+export default withProtection(DashboardPage, ["admin", "manager", "staff"]);

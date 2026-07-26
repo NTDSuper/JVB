@@ -7,7 +7,12 @@ from sqlalchemy.orm import Session
 from database import get_db
 from models.users_model import User
 from routers.auth import get_current_user, get_permission_codes
-from schemas.user_schema import (UserListResponse, UserResponse, UserUpdate, UserAdminUpdate)
+from schemas.user_schema import (
+    UserListResponse,
+    UserResponse,
+    UserUpdate,
+    UserAdminUpdate,
+)
 from services.user_service import UserService
 
 logger = logging.getLogger(__name__)
@@ -87,6 +92,11 @@ def admin_update_user(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Permission denied: 'user:update' required.",
         )
+    if current_user.id == user_id:
+        raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                 detail="You are not allowed to edit your own account.",
+            )
     return UserService.admin_update_user(user_id, payload, db)
 
 

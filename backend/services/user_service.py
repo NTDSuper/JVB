@@ -8,8 +8,14 @@ from sqlalchemy.orm import Session
 from models.cart_model import Cart
 from models.order_model import Order
 from models.refresh_tokens_model import RefreshToken
+from models.roles_model import Role
 from models.users_model import User
-from schemas.user_schema import UserListResponse, UserResponse, UserUpdate, UserAdminUpdate
+from schemas.user_schema import (
+    UserListResponse,
+    UserResponse,
+    UserUpdate,
+    UserAdminUpdate,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -57,7 +63,9 @@ class UserService:
     @staticmethod
     def get_user_by_id(user_id: int, db: Session) -> User:
         """Get a specific user by ID."""
-        user = db.query(User).filter(User.id == user_id, User.deleted_at.is_(None)).first()
+        user = (
+            db.query(User).filter(User.id == user_id, User.deleted_at.is_(None)).first()
+        )
         if not user:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -68,7 +76,9 @@ class UserService:
     @staticmethod
     def admin_update_user(user_id: int, payload: UserAdminUpdate, db: Session) -> User:
         """Admin update any user's profile."""
-        user = db.query(User).filter(User.id == user_id, User.deleted_at.is_(None)).first()
+        user = (
+            db.query(User).filter(User.id == user_id, User.deleted_at.is_(None)).first()
+        )
         if not user:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -93,7 +103,25 @@ class UserService:
                     detail="Username already exists",
                 )
 
-        update_data = payload.model_dump(exclude_unset=True)
+        # Handle role assignment separately
+        if "role" in payload.model_dump(exclude_unset=True):
+            role_names = payload.role
+            if not role_names:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="User must have at least one role",
+                )
+            roles = db.query(Role).filter(Role.name.in_(role_names)).all()
+            if len(roles) != len(role_names):
+                found_names = {r.name for r in roles}
+                missing = [r for r in role_names if r not in found_names]
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Roles not found: {', '.join(missing)}",
+                )
+            user.roles = roles
+
+        update_data = payload.model_dump(exclude_unset=True, exclude={"role"})
         for key, value in update_data.items():
             setattr(user, key, value)
 
@@ -104,7 +132,9 @@ class UserService:
     @staticmethod
     def delete_user(user_id: int, current_user: User, db: Session) -> dict:
         """Soft delete a user by ID."""
-        user = db.query(User).filter(User.id == user_id, User.deleted_at.is_(None)).first()
+        user = (
+            db.query(User).filter(User.id == user_id, User.deleted_at.is_(None)).first()
+        )
         if not user:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,

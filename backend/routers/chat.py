@@ -3,7 +3,14 @@ import logging
 import re
 
 import redis
-from fastapi import APIRouter, HTTPException, Query, Request, WebSocket, WebSocketDisconnect
+from fastapi import (
+    APIRouter,
+    HTTPException,
+    Query,
+    Request,
+    WebSocket,
+    WebSocketDisconnect,
+)
 from jose import JWTError
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
@@ -80,6 +87,7 @@ async def chat_bot(req: ChatRequest):
 
 from starlette.concurrency import run_in_threadpool
 
+
 # ── Connection Manager ───────────────────────────────────────────────────────
 class ConnectionManager:
     def __init__(self):
@@ -95,6 +103,7 @@ class ConnectionManager:
 
     async def send_personal_message(self, message: dict, websocket: WebSocket):
         await websocket.send_json(message)
+
 
 manager = ConnectionManager()
 
@@ -115,7 +124,9 @@ async def chat_ws(
         user = await _authenticate_token(token, db)
     except ValueError as e:
         logger.warning(f"WebSocket auth failed session={session_id}: {e}")
-        await manager.send_personal_message({"type": "error", "content": str(e)}, websocket)
+        await manager.send_personal_message(
+            {"type": "error", "content": str(e)}, websocket
+        )
         await websocket.close(code=4001)
         manager.disconnect(websocket)
         return
@@ -123,7 +134,9 @@ async def chat_ws(
         db.close()
 
     logger.info(f"WebSocket authenticated: session={session_id}")
-    await manager.send_personal_message({"type": "ready", "content": "Authentication successful"}, websocket)
+    await manager.send_personal_message(
+        {"type": "ready", "content": "Authentication successful"}, websocket
+    )
 
     # 3. Vòng lặp nhận/gửi tin nhắn
     try:
@@ -135,20 +148,30 @@ async def chat_ws(
                 data = json.loads(raw)
                 message = str(data.get("message", "")).strip()
             except json.JSONDecodeError:
-                await manager.send_personal_message({"type": "error", "content": "JSON invalid"}, websocket)
+                await manager.send_personal_message(
+                    {"type": "error", "content": "JSON invalid"}, websocket
+                )
                 continue
 
             if not message:
-                await manager.send_personal_message({"type": "error", "content": "Empty message"}, websocket)
+                await manager.send_personal_message(
+                    {"type": "error", "content": "Empty message"}, websocket
+                )
                 continue
 
             try:
                 # Run synchronous chat function in a threadpool to prevent blocking the event loop
-                answer = await run_in_threadpool(chat, session_id=session_id, message=message)
-                await manager.send_personal_message({"type": "answer", "content": answer}, websocket)
+                answer = await run_in_threadpool(
+                    chat, session_id=session_id, message=message
+                )
+                await manager.send_personal_message(
+                    {"type": "answer", "content": answer}, websocket
+                )
             except Exception as e:
                 logger.exception(f"AI error session={session_id}")
-                await manager.send_personal_message({"type": "error", "content": str(e)}, websocket)
+                await manager.send_personal_message(
+                    {"type": "error", "content": str(e)}, websocket
+                )
 
     except WebSocketDisconnect:
         logger.info(f"WebSocket disconnected: session={session_id}")

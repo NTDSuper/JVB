@@ -38,5 +38,15 @@ class OrderListResponse(BaseModel):
         from_attributes = True
 
 
+class OrderListPaginatedResponse(BaseModel):
+    items: List[OrderListResponse]
+    total: int
+    skip: int
+    limit: int
+
+    class Config:
+        from_attributes = True
+
+
 class CheckoutRequest(BaseModel):
     payment_method: str = "cash"

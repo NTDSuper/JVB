@@ -24,10 +24,17 @@ function readCache(): AuthUser | null {
   } catch { return null; }
 }
 function writeCache(user: AuthUser): void {
-  try { sessionStorage.setItem(CACHE_KEY, JSON.stringify(user)); } catch {}
+  try {
+    sessionStorage.setItem(CACHE_KEY, JSON.stringify(user));
+    const roles = Array.isArray(user.role) ? user.role : user.role ? [user.role] : [];
+    authService.setCookie("user_roles", JSON.stringify(roles));
+  } catch {}
 }
 function clearCache(): void {
-  try { sessionStorage.removeItem(CACHE_KEY); } catch {}
+  try {
+    sessionStorage.removeItem(CACHE_KEY);
+    authService.removeCookie("user_roles");
+  } catch {}
 }
 
 // ── Context Shape ──
@@ -99,11 +106,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         const res = await authService.login(credentials);
         authService.setToken(res.access_token);
 
-        const user = await authService.fetchCurrentUser();
+      const user = await authService.fetchCurrentUser();
         writeCache(user);
         setState({ user, isAuthenticated: true, isLoading: false, error: null });
 
-        router.replace("/products");
+        // Redirect based on role: Manager/Admin go to dashboard, User goes to products
+        const userRoles = Array.isArray(user.role) ? user.role : [user.role];
+        const isManagerOrAdmin = userRoles.some((r) => r === "manager" || r === "admin");
+        router.replace(isManagerOrAdmin ? "/dashboard" : "/products");
       } catch (err: unknown) {
         const axiosErr = err as { response?: { data?: { detail?: string } } };
         const message = axiosErr.response?.data?.detail || "Login failed. Please try again.";
@@ -119,12 +129,20 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       await authService.logout();
     } finally {
+      // Clear all auth data
       clearCache();
+      authService.removeToken();
       permissionService.clearPermissions();
+      // Reset state to Guest
       setState({ user: null, isAuthenticated: false, isLoading: false, error: null });
-      router.replace("/login");
+      // Force full page navigation to /products so middleware sees cleared cookies
+      // Using window.location.href instead of router.replace to ensure cookies
+      // are cleared before the middleware processes the request
+      if (typeof window !== "undefined") {
+        window.location.href = "/products";
+      }
     }
-  }, [router]);
+  }, []);
 
   // ── Update local user data ──
   const updateUser = useCallback((data: Partial<AuthUser>): void => {

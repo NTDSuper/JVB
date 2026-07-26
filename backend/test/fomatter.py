@@ -42,6 +42,4 @@ class DashboardOutput(BaseModel):
     chart: Chart | None = None
 
 
-formatter_parser = PydanticOutputParser(
-    pydantic_object=DashboardOutput
-)
+formatter_parser = PydanticOutputParser(pydantic_object=DashboardOutput)

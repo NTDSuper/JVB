@@ -11,7 +11,13 @@ from models.refresh_tokens_model import RefreshToken
 from database import get_db
 from models.users_model import User
 from models.roles_model import Role
-from schemas.token_schema import (AccessTokenResponse, TokenResponse, LoginRequest, RefreshTokenRequest, TokenData)
+from schemas.token_schema import (
+    AccessTokenResponse,
+    TokenResponse,
+    LoginRequest,
+    RefreshTokenRequest,
+    TokenData,
+)
 from schemas.user_schema import UserRegister, UserResponse
 from services.auth_service import AuthService
 from utils.redis_client import redis_client
@@ -54,7 +60,12 @@ def register(payload: UserRegister, db: Session = Depends(get_db)):
     response_model=TokenResponse,
     summary="Login, issue access_token and refresh_token",
 )
-def login(payload: LoginRequest, response: Response, request: Request, db: Session = Depends(get_db)):
+def login(
+    payload: LoginRequest,
+    response: Response,
+    request: Request,
+    db: Session = Depends(get_db),
+):
     return AuthService.login(payload, response, request, db)
 
 
@@ -64,7 +75,10 @@ def login(payload: LoginRequest, response: Response, request: Request, db: Sessi
     summary="reissue access_token using refresh_token from HttpOnly Cookie",
 )
 def refresh_access_token(
-    response: Response, request: Request, refresh_token: str = Cookie(None), db: Session = Depends(get_db)
+    response: Response,
+    request: Request,
+    refresh_token: str = Cookie(None),
+    db: Session = Depends(get_db),
 ):
     return AuthService.refresh_access_token(response, request, refresh_token, db)
 

@@ -1,25 +1,28 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 
 import { useAuthContext } from "@/auth/contexts/AuthContext";
+import { useTheme } from "@/components/ThemeProvider";
 import { getToken } from "@/lib/auth";
 import api from "@/lib/api";
 import { Cart } from "@/types/dto";
 
 const HIDDEN_ROUTES = ["/login", "/register"];
 
+// Navigation links per role (Guest = no links shown besides branding)
 const NAV_LINKS = [
-  { href: "/products", label: "Products" },
-  { href: "/cart", label: "Cart", showBadge: true },
-  { href: "/orders", label: "Orders" },
-  { href: "/dashboard", label: "Manager", roles: ["manager", "admin"] },
+  { href: "/products", label: "Products", roles: ["user", "guest"] },
+  { href: "/cart", label: "Cart", showBadge: true, roles: ["user"] },
+  { href: "/orders", label: "Orders", roles: ["user"] },
+  { href: "/dashboard", label: "Dashboard", roles: ["manager", "admin"] },
   { href: "/ai-dashboard", label: "AI Dashboard", roles: ["manager"] },
+  { href: "/orders/manage", label: "Order Management", roles: ["admin", "manager"] },
   { href: "/admin", label: "Admin", roles: ["admin"] },
-  { href: "/profile", label: "Profile" },
+  { href: "/profile", label: "Profile", roles: ["user", "manager", "admin"] },
 ] as const;
 
 interface NavLinkItemProps {
@@ -78,11 +81,25 @@ function readCachedUser() {
 export default function TopBar() {
   const pathname = usePathname();
   const { user, isAuthenticated, logout } = useAuthContext();
+  const { theme, toggleTheme } = useTheme();
   const [loggingOut, setLoggingOut] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
 
-  const hasSession = isAuthenticated || Boolean(getToken());
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  const hasSession = isMounted && (isAuthenticated || Boolean(getToken()));
   const sessionUser = user ?? (hasSession ? readCachedUser() : null);
+
+  const roles = useMemo(() => {
+    if (!sessionUser?.role) return [];
+    return Array.isArray(sessionUser.role) ? sessionUser.role : [sessionUser.role];
+  }, [sessionUser?.role]);
+
+  const isNormalUser = roles.includes("user");
+  const isGuest = !hasSession;
 
   const { data: cart } = useQuery({
     queryKey: ["cart"],
@@ -90,22 +107,23 @@ export default function TopBar() {
       const res = await api.get<Cart>("/cart");
       return res.data;
     },
-    enabled: hasSession,
+    enabled: hasSession && isNormalUser,
     staleTime: 1000 * 30,
   });
 
-  const roles = useMemo(() => {
-    if (!sessionUser?.role) return [];
-    return Array.isArray(sessionUser.role) ? sessionUser.role : [sessionUser.role];
-  }, [sessionUser?.role]);
-
+  // Guest sees only "Products" link; authenticated users see links matching their roles
   const visibleLinks = useMemo(
     () =>
       NAV_LINKS.filter((link) => {
+        if (isGuest) {
+          // Guest: only show Products
+          return link.href === "/products";
+        }
+        // Authenticated users filter by their roles
         if (!("roles" in link)) return true;
         return link.roles.some((role) => roles.includes(role));
       }),
-    [roles]
+    [roles, isGuest]
   );
 
   if (HIDDEN_ROUTES.includes(pathname)) {
@@ -157,6 +175,23 @@ export default function TopBar() {
         </nav>
 
         <div className="app-actions">
+          {/* Theme Toggle */}
+          <button
+            suppressHydrationWarning
+            type="button"
+            className="theme-toggle-btn"
+            onClick={toggleTheme}
+            aria-label={theme === "light" ? "Switch to dark mode" : "Switch to light mode"}
+            title={theme === "light" ? "Dark Mode" : "Light Mode"}
+          >
+            {theme === "light" ? "\u263E" : "\u2600"}
+          </button>
+
+          {!hasSession && (
+            <Link href="/login" className="btn btn-primary btn-sm" style={{ textDecoration: "none" }}>
+              Login
+            </Link>
+          )}
           {hasSession && (
             <>
               <Link href="/profile" className="user-chip" title={displayName}>
@@ -166,14 +201,6 @@ export default function TopBar() {
                 <span>{displayName}</span>
               </Link>
 
-              <button
-                type="button"
-                onClick={handleLogout}
-                className="btn btn-ghost btn-sm logout-btn logout-btn-desktop"
-                disabled={loggingOut}
-              >
-                {loggingOut ? "..." : "Logout"}
-              </button>
 
               <button
                 type="button"
@@ -195,7 +222,7 @@ export default function TopBar() {
             aria-expanded={mobileOpen}
             onClick={() => setMobileOpen((open) => !open)}
           >
-            {mobileOpen ? "×" : "☰"}
+            {mobileOpen ? "\u00d7" : "\u2630"}
           </button>
         </div>
       </div>

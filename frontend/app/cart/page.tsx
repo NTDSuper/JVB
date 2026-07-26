@@ -6,8 +6,9 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import api from "@/lib/api";
 import Toast from "@/components/Toast";
 import { Cart } from "@/types/dto";
+import { withProtection } from "@/components/ProtectedRouter";
 
-export default function CartPage() {
+function CartPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const [checkoutLoading, setCheckoutLoading] = useState(false);
@@ -321,3 +322,5 @@ export default function CartPage() {
     </>
   );
 }
+
+export default withProtection(CartPage, ["user"]);
