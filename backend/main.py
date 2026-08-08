@@ -20,6 +20,7 @@ from routers import (
     roles,
     revenue,
     upload,
+    analytics,
 )
 from utils.redis_client import redis_client
 from services.order_service import auto_cancel_expired_in_progress_orders
@@ -36,6 +37,8 @@ app.add_middleware(
         "http://localhost:5173",
         "http://127.0.0.1:5173",
         "http://localhost:3000",
+        "http://localhost:8080",
+        "http://127.0.0.1:8080",
     ],
     allow_credentials=True,
     allow_methods=["*"],
@@ -78,6 +81,7 @@ app.include_router(revenue.router)
 logger.info("Revenue router loaded")
 
 app.include_router(upload.router)
+app.include_router(analytics.router)
 logger.info("Upload router loaded")
 
 # Khởi tạo scheduler nền để tự động hủy đơn hàng quá hạn

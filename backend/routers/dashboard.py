@@ -179,7 +179,13 @@ async def create_dashboard_stream(
                 yield event
         except Exception as e:
             logger.exception(f"Dashboard stream failed: {e}")
-            yield f"data: {json.dumps({'type': 'error', 'widget': {'summary': f'Pipeline error: {str(e)}', 'display': 'table', 'table': [], 'chart': None}})}\n\n"
+            error_widget = {
+                "summary": f"Pipeline error: {str(e)}",
+                "display": "table",
+                "table": [],
+                "chart": None,
+            }
+            yield f"data: {json.dumps({'type': 'error', 'widget': error_widget})}\n\n"
             yield f"data: {json.dumps({'type': 'done'})}\n\n"
 
     return StreamingResponse(

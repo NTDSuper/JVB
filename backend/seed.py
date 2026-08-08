@@ -137,8 +137,16 @@ PERMISSIONS_DATA = [
 # Only 3 roles: admin, manager, user
 ROLES_DATA = [
     {"id": 1, "name": "admin", "description": "Administrator – full system access"},
-    {"id": 2, "name": "manager", "description": "Manager – manages products and orders"},
-    {"id": 3, "name": "user", "description": "Regular user – assigned automatically on registration"},
+    {
+        "id": 2,
+        "name": "manager",
+        "description": "Manager – manages products and orders",
+    },
+    {
+        "id": 3,
+        "name": "user",
+        "description": "Regular user – assigned automatically on registration",
+    },
 ]
 
 # Role permissions mapping (role_id → [permission_code])
@@ -242,11 +250,27 @@ CATEGORIES_DATA = [
     {"id": 3, "name": "Meat", "description": "Fresh pork, beef, and chicken"},
     {"id": 4, "name": "Seafood", "description": "Fresh and frozen seafood"},
     {"id": 5, "name": "Dairy", "description": "Milk, yogurt, cheese, and butter"},
-    {"id": 6, "name": "Bakery & Cereals", "description": "Fresh bread, oats, and cereals"},
+    {
+        "id": 6,
+        "name": "Bakery & Cereals",
+        "description": "Fresh bread, oats, and cereals",
+    },
     {"id": 7, "name": "Beverages", "description": "Soft drinks, water, tea, and beer"},
-    {"id": 8, "name": "Spices & Sauces", "description": "Cooking spices, sauces, and condiments"},
-    {"id": 9, "name": "Canned & Dry Food", "description": "Canned goods, noodles, and dry food"},
-    {"id": 10, "name": "Snacks & Candy", "description": "Cookies, candy, chips, and chocolate"},
+    {
+        "id": 8,
+        "name": "Spices & Sauces",
+        "description": "Cooking spices, sauces, and condiments",
+    },
+    {
+        "id": 9,
+        "name": "Canned & Dry Food",
+        "description": "Canned goods, noodles, and dry food",
+    },
+    {
+        "id": 10,
+        "name": "Snacks & Candy",
+        "description": "Cookies, candy, chips, and chocolate",
+    },
 ]
 
 # ── 5 Products per category (50 total, all English) ──
@@ -262,7 +286,7 @@ PRODUCTS_DATA = [
         "category_id": 1,
         "stock": 120,
         "status": "active",
-        "image_url": "https://placehold.co/400x300?text=Carrots",
+        "image_url": "products/9c47bc7f-483b-4b97-878b-1557d100995d.jpg",
     },
     {
         "id": 2,
@@ -274,7 +298,7 @@ PRODUCTS_DATA = [
         "category_id": 1,
         "stock": 80,
         "status": "active",
-        "image_url": "https://placehold.co/400x300?text=Broccoli",
+        "image_url": "products/73dc391f-ded3-43e6-b41f-6dc3d8d8cbcd.jpg",
     },
     {
         "id": 3,
@@ -286,7 +310,7 @@ PRODUCTS_DATA = [
         "category_id": 1,
         "stock": 150,
         "status": "active",
-        "image_url": "https://placehold.co/400x300?text=Tomatoes",
+        "image_url": "products/a596b7e2-536d-4334-8a85-06b76ac14478.jpg",
     },
     {
         "id": 4,
@@ -298,7 +322,7 @@ PRODUCTS_DATA = [
         "category_id": 1,
         "stock": 200,
         "status": "active",
-        "image_url": "https://placehold.co/400x300?text=Water+Spinach",
+        "image_url": "products/8737c6ab-c3eb-4af5-bad1-29717cc86466.jpg",
     },
     {
         "id": 5,
@@ -310,7 +334,7 @@ PRODUCTS_DATA = [
         "category_id": 1,
         "stock": 100,
         "status": "active",
-        "image_url": "https://placehold.co/400x300?text=Potatoes",
+        "image_url": "products/aeddbfc0-b3e4-42f8-a0dd-c79bc0876e2d.jpg",
     },
     # ── Category 2: Fruits (5 products) ──
     {
@@ -323,7 +347,7 @@ PRODUCTS_DATA = [
         "category_id": 2,
         "stock": 90,
         "status": "active",
-        "image_url": "https://placehold.co/400x300?text=Apples",
+        "image_url": "products/1f6022f4-89a0-4ee7-84f9-ede17b25057b.jpg",
     },
     {
         "id": 7,
@@ -335,7 +359,7 @@ PRODUCTS_DATA = [
         "category_id": 2,
         "stock": 180,
         "status": "active",
-        "image_url": "https://placehold.co/400x300?text=Bananas",
+        "image_url": "products/c46b6224-b970-4fdc-9fe5-408184e269cf.jpg",
     },
     {
         "id": 8,
@@ -347,7 +371,7 @@ PRODUCTS_DATA = [
         "category_id": 2,
         "stock": 110,
         "status": "active",
-        "image_url": "https://placehold.co/400x300?text=Oranges",
+        "image_url": "products/a01d515d-c42f-4591-aa5f-e073c4e8ccb4.jpg",
     },
     {
         "id": 9,
@@ -359,7 +383,7 @@ PRODUCTS_DATA = [
         "category_id": 2,
         "stock": 70,
         "status": "active",
-        "image_url": "https://placehold.co/400x300?text=Grapes",
+        "image_url": "products/eaec95ea-59a2-493d-86c5-ebdc7e046c09.jpg",
     },
     {
         "id": 10,
@@ -371,7 +395,7 @@ PRODUCTS_DATA = [
         "category_id": 2,
         "stock": 60,
         "status": "active",
-        "image_url": "https://placehold.co/400x300?text=Mangoes",
+        "image_url": "products/93228085-03bf-4f07-9879-cbcb6f7c7269.jpg",
     },
     # ── Category 3: Meat (5 products) ──
     {
@@ -384,7 +408,7 @@ PRODUCTS_DATA = [
         "category_id": 3,
         "stock": 80,
         "status": "active",
-        "image_url": "https://placehold.co/400x300?text=Pork+Belly",
+        "image_url": "products/4fbf6b92-555d-464f-88fa-c980fea51632.jpg",
     },
     {
         "id": 12,
@@ -396,7 +420,7 @@ PRODUCTS_DATA = [
         "category_id": 3,
         "stock": 100,
         "status": "active",
-        "image_url": "https://placehold.co/400x300?text=Chicken+Breast",
+        "image_url": "products/e80e991d-4c7b-4017-90e0-361f7bb75f92.jpg",
     },
     {
         "id": 13,
@@ -408,7 +432,7 @@ PRODUCTS_DATA = [
         "category_id": 3,
         "stock": 40,
         "status": "active",
-        "image_url": "https://placehold.co/400x300?text=Beef+Tenderloin",
+        "image_url": "products/2f9d75bf-ebdf-4c78-ba4f-81828b67233e.jpg",
     },
     {
         "id": 14,
@@ -420,7 +444,7 @@ PRODUCTS_DATA = [
         "category_id": 3,
         "stock": 60,
         "status": "active",
-        "image_url": "https://placehold.co/400x300?text=Pork+Ribs",
+        "image_url": "products/80897e14-fefb-4391-89d5-2c2093a645e2.jpg",
     },
     {
         "id": 15,
@@ -432,7 +456,7 @@ PRODUCTS_DATA = [
         "category_id": 3,
         "stock": 90,
         "status": "active",
-        "image_url": "https://placehold.co/400x300?text=Chicken+Thigh",
+        "image_url": "products/c59ba52b-a391-48ba-832a-1aba974e8385.jpg",
     },
     # ── Category 4: Seafood (5 products) ──
     {
@@ -445,7 +469,7 @@ PRODUCTS_DATA = [
         "category_id": 4,
         "stock": 50,
         "status": "active",
-        "image_url": "https://placehold.co/400x300?text=Shrimp",
+        "image_url": "products/41e932d0-6248-41fb-be1a-e06e45f3534b.jpg",
     },
     {
         "id": 17,
@@ -457,7 +481,7 @@ PRODUCTS_DATA = [
         "category_id": 4,
         "stock": 35,
         "status": "active",
-        "image_url": "https://placehold.co/400x300?text=Salmon",
+        "image_url": "products/fcf201b2-54fb-41ac-adfa-9c1a09d6e7a6.jpg",
     },
     {
         "id": 18,
@@ -469,7 +493,7 @@ PRODUCTS_DATA = [
         "category_id": 4,
         "stock": 45,
         "status": "active",
-        "image_url": "https://placehold.co/400x300?text=Squid",
+        "image_url": "products/b358d422-5dd9-49da-9d65-9d85cd6128cd.jpg",
     },
     {
         "id": 19,
@@ -481,7 +505,7 @@ PRODUCTS_DATA = [
         "category_id": 4,
         "stock": 75,
         "status": "active",
-        "image_url": "https://placehold.co/400x300?text=Pangasius",
+        "image_url": "products/e42ba9fd-39f2-44ce-88bf-4afe7f95ff81.jpg",
     },
     {
         "id": 20,
@@ -493,7 +517,7 @@ PRODUCTS_DATA = [
         "category_id": 4,
         "stock": 55,
         "status": "active",
-        "image_url": "https://placehold.co/400x300?text=Clams",
+        "image_url": "products/25db95e1-4eb6-4f03-ba59-f0c8a461bc2f.jpg",
     },
     # ── Category 5: Dairy (5 products) ──
     {
@@ -506,7 +530,7 @@ PRODUCTS_DATA = [
         "category_id": 5,
         "stock": 200,
         "status": "active",
-        "image_url": "https://placehold.co/400x300?text=Milk",
+        "image_url": "products/1eb44e04-ef8b-4272-b5e6-7065bd6e72ec.jpg",
     },
     {
         "id": 22,
@@ -518,7 +542,7 @@ PRODUCTS_DATA = [
         "category_id": 5,
         "stock": 300,
         "status": "active",
-        "image_url": "https://placehold.co/400x300?text=Yogurt",
+        "image_url": "products/b0e432aa-5078-40a7-b303-91ede60d22fd.jpg",
     },
     {
         "id": 23,
@@ -530,7 +554,7 @@ PRODUCTS_DATA = [
         "category_id": 5,
         "stock": 150,
         "status": "active",
-        "image_url": "https://placehold.co/400x300?text=Cheese",
+        "image_url": "products/b5da3352-b5ff-4443-837e-a95fc7d27c35.jpg",
     },
     {
         "id": 24,
@@ -542,7 +566,7 @@ PRODUCTS_DATA = [
         "category_id": 5,
         "stock": 80,
         "status": "active",
-        "image_url": "https://placehold.co/400x300?text=Butter",
+        "image_url": "products/bbcd24f6-db3a-41ab-86a3-06a00f1484ec.jpg",
     },
     {
         "id": 25,
@@ -554,7 +578,7 @@ PRODUCTS_DATA = [
         "category_id": 5,
         "stock": 60,
         "status": "active",
-        "image_url": "https://placehold.co/400x300?text=Whipping+Cream",
+        "image_url": "products/c14afbe8-47cc-466f-8aa1-9db6f404d254.jpg",
     },
     # ── Category 6: Bakery & Cereals (5 products) ──
     {
@@ -567,7 +591,7 @@ PRODUCTS_DATA = [
         "category_id": 6,
         "stock": 100,
         "status": "active",
-        "image_url": "https://placehold.co/400x300?text=Bread",
+        "image_url": "products/eb6d5683-5085-4dae-a549-039f0049e31d.jpg",
     },
     {
         "id": 27,
@@ -579,7 +603,7 @@ PRODUCTS_DATA = [
         "category_id": 6,
         "stock": 70,
         "status": "active",
-        "image_url": "https://placehold.co/400x300?text=Granola",
+        "image_url": "products/942fd740-b984-4493-bf2e-d5ab9f813d3c.jpg",
     },
     {
         "id": 28,
@@ -591,7 +615,7 @@ PRODUCTS_DATA = [
         "category_id": 6,
         "stock": 90,
         "status": "active",
-        "image_url": "https://placehold.co/400x300?text=Whole+Wheat+Bread",
+        "image_url": "products/6018c848-b10a-4e8a-9bb3-5bdd4a87e3b5.jpg",
     },
     {
         "id": 29,
@@ -603,7 +627,7 @@ PRODUCTS_DATA = [
         "category_id": 6,
         "stock": 85,
         "status": "active",
-        "image_url": "https://placehold.co/400x300?text=Oats",
+        "image_url": "products/b767a4e5-72c3-4f06-bbe9-aa696937fe3a.jpg",
     },
     {
         "id": 30,
@@ -615,7 +639,7 @@ PRODUCTS_DATA = [
         "category_id": 6,
         "stock": 60,
         "status": "active",
-        "image_url": "https://placehold.co/400x300?text=Garlic+Bread",
+        "image_url": "products/1514d827-0a06-446b-a518-38c30390dfc1.jpg",
     },
     # ── Category 7: Beverages (5 products) ──
     {
@@ -628,7 +652,7 @@ PRODUCTS_DATA = [
         "category_id": 7,
         "stock": 250,
         "status": "active",
-        "image_url": "https://placehold.co/400x300?text=Coca+Cola",
+        "image_url": "products/8207db50-5b19-4fea-912f-de62a6f901ea.jpg",
     },
     {
         "id": 32,
@@ -640,7 +664,7 @@ PRODUCTS_DATA = [
         "category_id": 7,
         "stock": 400,
         "status": "active",
-        "image_url": "https://placehold.co/400x300?text=Mineral+Water",
+        "image_url": "products/3a739946-654a-4c16-886f-377ba845ebb6.jpg",
     },
     {
         "id": 33,
@@ -652,7 +676,7 @@ PRODUCTS_DATA = [
         "category_id": 7,
         "stock": 300,
         "status": "active",
-        "image_url": "https://placehold.co/400x300?text=Green+Tea",
+        "image_url": "products/ee289c21-9405-425e-9534-9de4752aeb16.jpg",
     },
     {
         "id": 34,
@@ -664,7 +688,7 @@ PRODUCTS_DATA = [
         "category_id": 7,
         "stock": 180,
         "status": "active",
-        "image_url": "https://placehold.co/400x300?text=Orange+Juice",
+        "image_url": "products/f4e4d864-4595-4640-a0f4-9afdbe016317.jpg",
     },
     {
         "id": 35,
@@ -676,7 +700,7 @@ PRODUCTS_DATA = [
         "category_id": 7,
         "stock": 200,
         "status": "active",
-        "image_url": "https://placehold.co/400x300?text=Beer",
+        "image_url": "products/4af9e8ce-2ab4-46f3-8370-ffff80b493e0.jpg",
     },
     # ── Category 8: Spices & Sauces (5 products) ──
     {
@@ -689,7 +713,7 @@ PRODUCTS_DATA = [
         "category_id": 8,
         "stock": 150,
         "status": "active",
-        "image_url": "https://placehold.co/400x300?text=Fish+Sauce",
+        "image_url": "products/4ed96bea-168a-4bd3-a7c2-7853f26eabca.jpg",
     },
     {
         "id": 37,
@@ -701,7 +725,7 @@ PRODUCTS_DATA = [
         "category_id": 8,
         "stock": 120,
         "status": "active",
-        "image_url": "https://placehold.co/400x300?text=Cooking+Oil",
+        "image_url": "products/187bf60b-ce7a-4ab6-8f08-dea062f3b6ad.jpg",
     },
     {
         "id": 38,
@@ -713,7 +737,7 @@ PRODUCTS_DATA = [
         "category_id": 8,
         "stock": 200,
         "status": "active",
-        "image_url": "https://placehold.co/400x300?text=Chili+Sauce",
+        "image_url": "products/b691764a-8644-43d0-8aa7-d4f5b36505fc.jpg",
     },
     {
         "id": 39,
@@ -725,7 +749,7 @@ PRODUCTS_DATA = [
         "category_id": 8,
         "stock": 160,
         "status": "active",
-        "image_url": "https://placehold.co/400x300?text=Seasoning",
+        "image_url": "products/abc9cceb-c855-4a8d-a3fc-c99a446dcf10.jpg",
     },
     {
         "id": 40,
@@ -737,7 +761,7 @@ PRODUCTS_DATA = [
         "category_id": 8,
         "stock": 140,
         "status": "active",
-        "image_url": "https://placehold.co/400x300?text=Soy+Sauce",
+        "image_url": "products/a1c68534-fd84-4f70-87c4-bb31309b36e2.jpg",
     },
     # ── Category 9: Canned & Dry Food (5 products) ──
     {
@@ -750,7 +774,7 @@ PRODUCTS_DATA = [
         "category_id": 9,
         "stock": 180,
         "status": "active",
-        "image_url": "https://placehold.co/400x300?text=Canned+Fish",
+        "image_url": "products/ef99be29-56b5-45f2-b9f7-48f196116367.jpg",
     },
     {
         "id": 42,
@@ -762,7 +786,7 @@ PRODUCTS_DATA = [
         "category_id": 9,
         "stock": 500,
         "status": "active",
-        "image_url": "https://placehold.co/400x300?text=Instant+Noodles",
+        "image_url": "products/2591d027-085f-4454-9e76-a9960768ce4c.jpg",
     },
     {
         "id": 43,
@@ -774,7 +798,7 @@ PRODUCTS_DATA = [
         "category_id": 9,
         "stock": 100,
         "status": "active",
-        "image_url": "https://placehold.co/400x300?text=Tofu",
+        "image_url": "products/8a342521-4c3c-44f4-8efa-69825dd27e0c.jpg",
     },
     {
         "id": 44,
@@ -786,7 +810,7 @@ PRODUCTS_DATA = [
         "category_id": 9,
         "stock": 50,
         "status": "active",
-        "image_url": "https://placehold.co/400x300?text=Dried+Mushrooms",
+        "image_url": "products/0507bf9c-b059-4261-8c39-4e2e46f02251.jpg",
     },
     {
         "id": 45,
@@ -798,7 +822,7 @@ PRODUCTS_DATA = [
         "category_id": 9,
         "stock": 90,
         "status": "active",
-        "image_url": "https://placehold.co/400x300?text=Pate",
+        "image_url": "products/80f27034-9e10-4e44-be3f-6beed59efb0f.jpg",
     },
     # ── Category 10: Snacks & Candy (5 products) ──
     {
@@ -811,7 +835,7 @@ PRODUCTS_DATA = [
         "category_id": 10,
         "stock": 200,
         "status": "active",
-        "image_url": "https://placehold.co/400x300?text=Oreo",
+        "image_url": "products/ffe8043d-7b3e-4d9f-874a-f87bf65cdef2.jpg",
     },
     {
         "id": 47,
@@ -823,7 +847,7 @@ PRODUCTS_DATA = [
         "category_id": 10,
         "stock": 150,
         "status": "active",
-        "image_url": "https://placehold.co/400x300?text=Haribo",
+        "image_url": "products/6f358d4a-1a73-47e1-98ba-71933a244bc2.jpg",
     },
     {
         "id": 48,
@@ -835,7 +859,7 @@ PRODUCTS_DATA = [
         "category_id": 10,
         "stock": 300,
         "status": "active",
-        "image_url": "https://placehold.co/400x300?text=Lays",
+        "image_url": "products/9a7ebced-41af-43c7-9335-3306a52b2072.jpg",
     },
     {
         "id": 49,
@@ -847,7 +871,7 @@ PRODUCTS_DATA = [
         "category_id": 10,
         "stock": 60,
         "status": "active",
-        "image_url": "https://placehold.co/400x300?text=Swiss+Roll",
+        "image_url": "products/2eac042a-2b81-417c-af16-c3cbd3b0389f.jpg",
     },
     {
         "id": 50,
@@ -859,52 +883,232 @@ PRODUCTS_DATA = [
         "category_id": 10,
         "stock": 80,
         "status": "active",
-        "image_url": "https://placehold.co/400x300?text=Dark+Chocolate",
+        "image_url": "products/24a23072-eee9-42e9-9378-8c0866448174.jpg",
     },
 ]
 
 # ── Attributes: each category has at least 2 attributes (all English) ──
 ATTRIBUTES_DATA = [
     # Category 1: Vegetables
-    {"id": 1, "category_id": 1, "name": "Weight", "data_type": "string", "required": True},
-    {"id": 2, "category_id": 1, "name": "Origin", "data_type": "string", "required": True},
-    {"id": 3, "category_id": 1, "name": "Organic", "data_type": "boolean", "required": False},
+    {
+        "id": 1,
+        "category_id": 1,
+        "name": "Weight",
+        "data_type": "string",
+        "required": True,
+    },
+    {
+        "id": 2,
+        "category_id": 1,
+        "name": "Origin",
+        "data_type": "string",
+        "required": True,
+    },
+    {
+        "id": 3,
+        "category_id": 1,
+        "name": "Organic",
+        "data_type": "boolean",
+        "required": False,
+    },
     # Category 2: Fruits
-    {"id": 4, "category_id": 2, "name": "Weight", "data_type": "string", "required": True},
-    {"id": 5, "category_id": 2, "name": "Origin", "data_type": "string", "required": True},
-    {"id": 6, "category_id": 2, "name": "Sweetness", "data_type": "string", "required": False},
+    {
+        "id": 4,
+        "category_id": 2,
+        "name": "Weight",
+        "data_type": "string",
+        "required": True,
+    },
+    {
+        "id": 5,
+        "category_id": 2,
+        "name": "Origin",
+        "data_type": "string",
+        "required": True,
+    },
+    {
+        "id": 6,
+        "category_id": 2,
+        "name": "Sweetness",
+        "data_type": "string",
+        "required": False,
+    },
     # Category 3: Meat
-    {"id": 7, "category_id": 3, "name": "Weight", "data_type": "string", "required": True},
-    {"id": 8, "category_id": 3, "name": "Meat Type", "data_type": "string", "required": True},
-    {"id": 9, "category_id": 3, "name": "Storage", "data_type": "string", "required": False},
+    {
+        "id": 7,
+        "category_id": 3,
+        "name": "Weight",
+        "data_type": "string",
+        "required": True,
+    },
+    {
+        "id": 8,
+        "category_id": 3,
+        "name": "Meat Type",
+        "data_type": "string",
+        "required": True,
+    },
+    {
+        "id": 9,
+        "category_id": 3,
+        "name": "Storage",
+        "data_type": "string",
+        "required": False,
+    },
     # Category 4: Seafood
-    {"id": 10, "category_id": 4, "name": "Weight", "data_type": "string", "required": True},
-    {"id": 11, "category_id": 4, "name": "Seafood Type", "data_type": "string", "required": True},
-    {"id": 12, "category_id": 4, "name": "Wild/Caught", "data_type": "string", "required": False},
+    {
+        "id": 10,
+        "category_id": 4,
+        "name": "Weight",
+        "data_type": "string",
+        "required": True,
+    },
+    {
+        "id": 11,
+        "category_id": 4,
+        "name": "Seafood Type",
+        "data_type": "string",
+        "required": True,
+    },
+    {
+        "id": 12,
+        "category_id": 4,
+        "name": "Wild/Caught",
+        "data_type": "string",
+        "required": False,
+    },
     # Category 5: Dairy
-    {"id": 13, "category_id": 5, "name": "Volume", "data_type": "string", "required": True},
-    {"id": 14, "category_id": 5, "name": "Fat Content", "data_type": "string", "required": False},
-    {"id": 15, "category_id": 5, "name": "Expiry Date", "data_type": "string", "required": True},
+    {
+        "id": 13,
+        "category_id": 5,
+        "name": "Volume",
+        "data_type": "string",
+        "required": True,
+    },
+    {
+        "id": 14,
+        "category_id": 5,
+        "name": "Fat Content",
+        "data_type": "string",
+        "required": False,
+    },
+    {
+        "id": 15,
+        "category_id": 5,
+        "name": "Expiry Date",
+        "data_type": "string",
+        "required": True,
+    },
     # Category 6: Bakery & Cereals
-    {"id": 16, "category_id": 6, "name": "Weight", "data_type": "string", "required": True},
-    {"id": 17, "category_id": 6, "name": "Flour Type", "data_type": "string", "required": False},
-    {"id": 18, "category_id": 6, "name": "Expiry Date", "data_type": "string", "required": True},
+    {
+        "id": 16,
+        "category_id": 6,
+        "name": "Weight",
+        "data_type": "string",
+        "required": True,
+    },
+    {
+        "id": 17,
+        "category_id": 6,
+        "name": "Flour Type",
+        "data_type": "string",
+        "required": False,
+    },
+    {
+        "id": 18,
+        "category_id": 6,
+        "name": "Expiry Date",
+        "data_type": "string",
+        "required": True,
+    },
     # Category 7: Beverages
-    {"id": 19, "category_id": 7, "name": "Volume", "data_type": "string", "required": True},
-    {"id": 20, "category_id": 7, "name": "Carbonated", "data_type": "boolean", "required": False},
-    {"id": 21, "category_id": 7, "name": "Flavor", "data_type": "string", "required": False},
+    {
+        "id": 19,
+        "category_id": 7,
+        "name": "Volume",
+        "data_type": "string",
+        "required": True,
+    },
+    {
+        "id": 20,
+        "category_id": 7,
+        "name": "Carbonated",
+        "data_type": "boolean",
+        "required": False,
+    },
+    {
+        "id": 21,
+        "category_id": 7,
+        "name": "Flavor",
+        "data_type": "string",
+        "required": False,
+    },
     # Category 8: Spices & Sauces
-    {"id": 22, "category_id": 8, "name": "Volume", "data_type": "string", "required": True},
-    {"id": 23, "category_id": 8, "name": "Type", "data_type": "string", "required": True},
-    {"id": 24, "category_id": 8, "name": "Expiry Date", "data_type": "string", "required": True},
+    {
+        "id": 22,
+        "category_id": 8,
+        "name": "Volume",
+        "data_type": "string",
+        "required": True,
+    },
+    {
+        "id": 23,
+        "category_id": 8,
+        "name": "Type",
+        "data_type": "string",
+        "required": True,
+    },
+    {
+        "id": 24,
+        "category_id": 8,
+        "name": "Expiry Date",
+        "data_type": "string",
+        "required": True,
+    },
     # Category 9: Canned & Dry Food
-    {"id": 25, "category_id": 9, "name": "Weight", "data_type": "string", "required": True},
-    {"id": 26, "category_id": 9, "name": "Type", "data_type": "string", "required": True},
-    {"id": 27, "category_id": 9, "name": "Expiry Date", "data_type": "string", "required": True},
+    {
+        "id": 25,
+        "category_id": 9,
+        "name": "Weight",
+        "data_type": "string",
+        "required": True,
+    },
+    {
+        "id": 26,
+        "category_id": 9,
+        "name": "Type",
+        "data_type": "string",
+        "required": True,
+    },
+    {
+        "id": 27,
+        "category_id": 9,
+        "name": "Expiry Date",
+        "data_type": "string",
+        "required": True,
+    },
     # Category 10: Snacks & Candy
-    {"id": 28, "category_id": 10, "name": "Weight", "data_type": "string", "required": True},
-    {"id": 29, "category_id": 10, "name": "Flavor", "data_type": "string", "required": False},
-    {"id": 30, "category_id": 10, "name": "Expiry Date", "data_type": "string", "required": True},
+    {
+        "id": 28,
+        "category_id": 10,
+        "name": "Weight",
+        "data_type": "string",
+        "required": True,
+    },
+    {
+        "id": 29,
+        "category_id": 10,
+        "name": "Flavor",
+        "data_type": "string",
+        "required": False,
+    },
+    {
+        "id": 30,
+        "category_id": 10,
+        "name": "Expiry Date",
+        "data_type": "string",
+        "required": True,
+    },
 ]
 
 PRODUCT_ATTRIBUTE_VALUES_DATA = [
@@ -1057,70 +1261,78 @@ product_prices = {p["id"]: p["price"] for p in PRODUCTS_DATA}
 # For each month from Jan 2026 to Jul 2026
 for month in range(1, 8):
     days_in_month = calendar.monthrange(2026, month)[1]
-    
+
     # Pick ~15 distinct days per month to have orders
     num_order_days = random.randint(12, 18)
-    order_days = sorted(random.sample(range(1, days_in_month + 1), min(num_order_days, days_in_month)))
-    
+    order_days = sorted(
+        random.sample(range(1, days_in_month + 1), min(num_order_days, days_in_month))
+    )
+
     for day in order_days:
         # Number of orders on this day (2-6)
         num_orders_today = random.randint(2, 6)
-        
+
         for _ in range(num_orders_today):
             user_id = random.choice(user_ids_for_orders)
-            
+
             # Random time during the day
             hour = random.randint(6, 22)
             minute = random.randint(0, 59)
             order_date = datetime(2026, month, day, hour, minute)
-            
+
             # Random status: only "cancelled" or "completed"
             status = random.choice(["cancelled", "completed"])
-            
+
             # Pick 1-5 random products for this order
             num_items = random.randint(1, 5)
             selected_products = random.sample(range(1, 51), num_items)
-            
+
             total_amount = 0
             order_items = []
-            
+
             for prod_id in selected_products:
                 qty = random.randint(1, 5)
                 price = product_prices[prod_id]
                 total_amount += price * qty
-                order_items.append({
-                    "id": order_item_id_counter,
-                    "order_id": order_id_counter,
-                    "product_id": prod_id,
-                    "quantity": qty,
-                    "price": price,
-                })
+                order_items.append(
+                    {
+                        "id": order_item_id_counter,
+                        "order_id": order_id_counter,
+                        "product_id": prod_id,
+                        "quantity": qty,
+                        "price": price,
+                    }
+                )
                 order_item_id_counter += 1
-            
-            ORDERS_DATA.append({
-                "id": order_id_counter,
-                "user_id": user_id,
-                "total_amount": round(total_amount, 2),
-                "status": status,
-            })
-            
+
+            ORDERS_DATA.append(
+                {
+                    "id": order_id_counter,
+                    "user_id": user_id,
+                    "total_amount": round(total_amount, 2),
+                    "status": status,
+                }
+            )
+
             ORDER_ITEMS_DATA.extend(order_items)
-            
+
             # Payment
             payment_status = "completed" if status == "completed" else "cancelled"
             paid_at = order_date + timedelta(minutes=random.randint(5, 120))
-            
-            PAYMENTS_DATA.append({
-                "id": payment_id_counter,
-                "order_id": order_id_counter,
-                "method": random.choice(["bank_transfer"]),
-                "amount": round(total_amount, 2),
-                "status": payment_status,
-                "expires_at": order_date + timedelta(hours=24),
-                "paid_at": paid_at,
-            })
+
+            PAYMENTS_DATA.append(
+                {
+                    "id": payment_id_counter,
+                    "order_id": order_id_counter,
+                    "method": random.choice(["bank_transfer"]),
+                    "amount": round(total_amount, 2),
+                    "status": payment_status,
+                    "expires_at": order_date + timedelta(hours=24),
+                    "paid_at": paid_at,
+                }
+            )
             payment_id_counter += 1
-            
+
             order_id_counter += 1
 
 

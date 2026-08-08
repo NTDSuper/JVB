@@ -8,7 +8,12 @@ import { useAuthContext } from "@/auth/contexts/AuthContext";
 const PUBLIC_ROUTES = ["/", "/login", "/register", "/products", "/403"];
 
 function isPublicRoute(pathname: string): boolean {
-  return PUBLIC_ROUTES.includes(pathname) || pathname.startsWith("/products/");
+  if (PUBLIC_ROUTES.includes(pathname)) return true;
+  // Customer product pages only - exclude /products/manager
+  if (pathname.startsWith("/products/") && !pathname.startsWith("/products/manager")) {
+    return true;
+  }
+  return false;
 }
 
 export function LoadingSpinner() {
@@ -161,6 +166,7 @@ export default function ProtectedRoute({ children, roles }: ProtectedRouteProps)
       : roles.some((r) => userRoles.includes(r));
 
   const isManagerOrAdmin = userRoles.some((r) => r === "manager" || r === "admin");
+
 
   useEffect(() => {
     if (!isMounted || isLoading) return;

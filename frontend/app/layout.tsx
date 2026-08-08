@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 
-import TopBar from "@/components/TopBar";
+import TopBar from "@/components/TopBar/TopBar";
+import Footer from "@/components/Footer";
 import ChatWidget from "@/components/ChatWidget";
 import { AuthProvider } from "@/auth/contexts/AuthContext";
 import { ThemeProvider } from "@/components/ThemeProvider";
@@ -19,6 +20,8 @@ export const metadata: Metadata = {
   description:
     "Modern supermarket management system with product browsing, cart, orders and admin features",
 };
+
+export const dynamic = 'force-dynamic';
 
 export default function RootLayout({
   children,
@@ -51,6 +54,7 @@ export default function RootLayout({
             <AuthProvider>
               <TopBar />
               <main className="app-main">{children}</main>
+              <Footer />
               <ChatWidget />
             </AuthProvider>
           </ThemeProvider>

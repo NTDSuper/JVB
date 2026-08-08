@@ -64,6 +64,7 @@ question
 - Phải mô tả đúng dữ liệu cần lấy.
 
 display
+
 Chỉ được là một trong:
 
 - "kpi"
@@ -77,6 +78,8 @@ Chỉ được là một trong:
 - "bar"
 - "line"
 - "pie"
+- "mixed"
+- "doughnut"
 - "none"
 
 Nếu display khác "chart" thì chart_type bắt buộc là "none".
@@ -85,41 +88,42 @@ Nếu display khác "chart" thì chart_type bắt buộc là "none".
 QUY TẮC CHỌN DISPLAY
 ========================
 
-Chọn display phù hợp nhất với loại dữ liệu.
-
 kpi
 
-Sử dụng khi kết quả chỉ là:
+Sử dụng khi kết quả chỉ gồm một giá trị hoặc một KPI.
 
-- một giá trị
-- một số liệu tổng hợp
-- doanh thu
-- tổng đơn hàng
-- số lượng khách hàng
-- tỷ lệ
-- giá trị trung bình
-- giá trị lớn nhất
-- giá trị nhỏ nhất
+Ví dụ:
+
+- Tổng doanh thu
+- Tổng đơn hàng
+- Tổng khách hàng
+- Giá trị trung bình
+- Giá trị lớn nhất
+- Giá trị nhỏ nhất
+- Tỷ lệ chuyển đổi
+- Tỷ lệ hoàn thành
 
 table
 
 Sử dụng khi:
 
-- người dùng muốn xem danh sách
-- cần hiển thị nhiều cột
+- cần hiển thị danh sách
 - dữ liệu chi tiết
-- bảng xếp hạng
+- nhiều cột
 - lịch sử
+- bảng xếp hạng
 - báo cáo dạng bảng
+- người dùng yêu cầu xem dữ liệu gốc
 
 chart
 
 Sử dụng khi:
 
+- cần trực quan hóa
 - cần so sánh
 - cần xem xu hướng
 - cần xem phân bố
-- cần trực quan hóa dữ liệu
+- cần xem mối quan hệ giữa các giá trị
 
 ========================
 QUY TẮC CHỌN CHART
@@ -127,36 +131,122 @@ QUY TẮC CHỌN CHART
 
 bar
 
-Ưu tiên khi:
+Sử dụng khi:
 
 - so sánh giữa các nhóm
+- doanh thu theo danh mục
+- doanh thu theo thương hiệu
 - top sản phẩm
 - top khách hàng
-- doanh thu theo danh mục
+- top nhân viên
 - số lượng theo nhóm
+- xếp hạng
+
+Ưu tiên khi chỉ có một metric.
+
+--------------------------------
 
 line
 
-Ưu tiên khi:
+Sử dụng khi:
 
 - dữ liệu theo thời gian
 - doanh thu theo ngày
+- doanh thu theo tuần
 - doanh thu theo tháng
-- tăng trưởng
+- doanh thu theo năm
 - xu hướng
+- tăng trưởng
+- KPI theo thời gian
+
+Ưu tiên khi trục X là thời gian.
+
+--------------------------------
 
 pie
 
-Ưu tiên khi:
+Sử dụng khi:
 
 - tỷ trọng
 - cơ cấu
 - phần trăm
-- phân bố giữa các nhóm
+- phân bố
+
+Điều kiện:
+
+- dữ liệu là các phần của một tổng
+- số nhóm không quá 6
+
+Ví dụ:
+
+- Tỷ trọng doanh thu theo danh mục
+- Tỷ trọng đơn hàng theo trạng thái
+
+--------------------------------
+
+doughnut
+
+Sử dụng tương tự pie nhưng muốn nhấn mạnh tổng ở trung tâm.
+
+Ví dụ:
+
+- Cơ cấu doanh thu
+- Cơ cấu khách hàng
+- Cơ cấu đơn hàng
+
+--------------------------------
+
+mixed
+
+Sử dụng khi:
+
+- có từ hai metric trở lên
+- các metric dùng chung một trục X
+- cần vừa so sánh vừa theo dõi xu hướng
+
+Ví dụ:
+
+- Doanh thu và số đơn theo tháng
+- Doanh thu và lợi nhuận
+- Doanh thu và tỷ lệ tăng trưởng
+- Doanh thu và số khách hàng
+
+Quy tắc:
+
+- Metric biểu diễn giá trị tuyệt đối (Revenue, Sales, Amount, Quantity...) dùng Bar.
+- Metric biểu diễn KPI hoặc xu hướng (Orders, Profit, Growth Rate, Conversion Rate...) dùng Line.
+
+--------------------------------
+
+
+
 
 none
 
-Chỉ dùng khi display không phải chart.
+Chỉ dùng khi display khác "chart".
+
+========================
+QUY TẮC ƯU TIÊN
+========================
+
+Nếu dữ liệu theo thời gian:
+→ line
+
+Nếu có nhiều metric trên cùng trục X:
+→ mixed
+
+Nếu dữ liệu là tỷ trọng của một tổng:
+→ pie hoặc doughnut
+
+Nếu dữ liệu là so sánh giữa các nhóm:
+→ bar
+
+
+Nếu không chắc chắn giữa bar và pie:
+→ ưu tiên bar.
+
+Nếu không chắc chắn giữa bar và mixed:
+→ nếu chỉ có một metric thì dùng bar, từ hai metric trở lên thì dùng mixed.
 
 ========================
 TÁCH TASK

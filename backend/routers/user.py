@@ -94,9 +94,9 @@ def admin_update_user(
         )
     if current_user.id == user_id:
         raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                 detail="You are not allowed to edit your own account.",
-            )
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You are not allowed to edit your own account.",
+        )
     return UserService.admin_update_user(user_id, payload, db)
 
 

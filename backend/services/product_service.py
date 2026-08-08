@@ -6,7 +6,7 @@ from datetime import datetime
 
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
-
+from sqlalchemy import and_, or_, case
 from models.users_model import User
 from models.attribute_model import Attribute
 from models.product_attribute_value_model import ProductAttributeValue
@@ -27,6 +27,7 @@ from services.s3_services import S3Service
 logger = logging.getLogger(__name__)
 
 s3_service = S3Service()
+
 
 def _generate_slug(name: str) -> str:
     """Convert a name to a URL-friendly slug."""
@@ -160,9 +161,7 @@ class ProductService:
 
         base = ProductResponse.model_validate(product).model_dump(mode="json")
         if product.image_url:
-            base["image_url"] = s3_service.generate_presigned_get_url(
-                product.image_url
-            )
+            base["image_url"] = s3_service.generate_presigned_get_url(product.image_url)
         else:
             base["image_url"] = None
         base["attributes"] = attrs
@@ -252,10 +251,10 @@ class ProductService:
         return db.query(Category).all()
 
     @staticmethod
-    def get_products(skip: int, limit: int, refresh: bool, db: Session) -> dict:
+    def get_products(skip: int, limit: int, refresh: bool, db: Session, category_id: int | None = None) -> dict:
         """Get all products with caching and pagination metadata."""
         if not refresh:
-            cache_key = f"products:list:{skip}:{limit}"
+            cache_key = f"products:list:{skip}:{limit}:cat:{category_id or 'all'}"
             try:
                 cached = redis_client.get(cache_key)
                 if cached:
@@ -264,6 +263,8 @@ class ProductService:
                 logger.error(f"Redis cache get error: {e}")
 
         query = ProductService._apply_active_filter(db.query(Product))
+        if category_id is not None:
+            query = query.filter(Product.category_id == category_id)
         total = query.count()
         products = query.offset(skip).limit(limit).all()
         items = [ProductService._build_product_response(p) for p in products]
@@ -280,19 +281,90 @@ class ProductService:
             logger.error(f"Redis cache set error: {e}")
         return result
 
+    
+
     @staticmethod
-    def search_product(keyword: str, db: Session) -> list:
-        """Search products by keyword."""
-        products = (
-            ProductService._apply_active_filter(db.query(Product))
-            .filter(
-                Product.name.ilike(f"%{keyword}%")
-                | Product.sku.ilike(f"%{keyword}%")
-                | Product.description.ilike(f"%{keyword}%")
+    def search_product(
+        keyword: str,
+        skip: int,
+        limit: int,
+        refresh: bool,
+        db: Session,
+    ) -> dict:
+        """Search products with caching and pagination metadata."""
+
+        cache_key = f"products:search:{keyword}:{skip}:{limit}"
+
+        if not refresh:
+            try:
+                cached = redis_client.get(cache_key)
+                if cached:
+                    return json.loads(cached)
+            except Exception as e:
+                logger.error(f"Redis cache get error: {e}")
+
+        keyword = keyword.strip()
+
+        if not keyword:
+            return {
+                "items": [],
+                "total": 0,
+                "skip": skip,
+                "limit": limit,
+            }
+
+        query = ProductService._apply_active_filter(db.query(Product))
+
+        # Hỗ trợ tìm nhiều từ khóa
+        conditions = []
+        for word in keyword.split():
+            conditions.append(
+                or_(
+                    Product.name.ilike(f"%{word}%"),
+                    Product.sku.ilike(f"%{word}%"),
+                    Product.description.ilike(f"%{word}%"),
+                )
             )
+
+        query = query.filter(and_(*conditions))
+
+        # Ưu tiên kết quả liên quan hơn
+        score = case(
+            (Product.name.ilike(f"{keyword}%"), 4),
+            (Product.name.ilike(f"%{keyword}%"), 3),
+            (Product.sku.ilike(f"{keyword}%"), 2),
+            (Product.description.ilike(f"%{keyword}%"), 1),
+            else_=0,
+        )
+
+        total = query.count()
+
+        products = (
+            query
+            .order_by(score.desc(), Product.name.asc())
+            .offset(skip)
+            .limit(limit)
             .all()
         )
-        return [ProductService._build_product_response(p) for p in products]
+
+        items = [
+            ProductService._build_product_response(product)
+            for product in products
+        ]
+
+        result = {
+            "items": items,
+            "total": total,
+            "skip": skip,
+            "limit": limit,
+        }
+
+        try:
+            redis_client.setex(cache_key, 30, json.dumps(result))
+        except Exception as e:
+            logger.error(f"Redis cache set error: {e}")
+
+        return result
 
     @staticmethod
     def get_product(product_id: int, db: Session) -> dict:
@@ -355,7 +427,9 @@ class ProductService:
 
         # Track old image key before update for cleanup
         old_image_key = product.image_url
-        image_changed = "image_url" in update_data and update_data["image_url"] != old_image_key
+        image_changed = (
+            "image_url" in update_data and update_data["image_url"] != old_image_key
+        )
 
         # Cập nhật các field thông thường
         for key, value in update_data.items():
@@ -398,7 +472,9 @@ class ProductService:
                     s3 = S3Service()
                     s3.delete_object(update_data["image_url"])
                 except Exception as s3_err:
-                    logger.error("Failed to clean up new S3 image on rollback: %s", s3_err)
+                    logger.error(
+                        "Failed to clean up new S3 image on rollback: %s", s3_err
+                    )
             raise
 
     @staticmethod

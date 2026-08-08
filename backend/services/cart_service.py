@@ -13,9 +13,11 @@ from schemas.cart_schema import (
     CartItemResponse,
     CartResponse,
 )
+from services.s3_services import S3Service
 
 logger = logging.getLogger(__name__)
 
+s3_service = S3Service()
 
 class CartService:
     @staticmethod
@@ -50,7 +52,7 @@ class CartService:
                     product_name=product.name,
                     product_sku=product.sku,
                     product_price=float(product.price),
-                    product_image_url=product.image_url,
+                    product_image_url=s3_service.generate_presigned_get_url(product.image_url),
                     quantity=item.quantity,
                     subtotal=round(subtotal, 2),
                 )

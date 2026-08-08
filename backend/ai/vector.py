@@ -1,3 +1,4 @@
+import os
 from dotenv import load_dotenv
 from qdrant_client import QdrantClient
 from qdrant_client.models import PointStruct
@@ -6,11 +7,13 @@ from langchain_google_genai import GoogleGenerativeAIEmbeddings
 
 load_dotenv()
 
+QDRANT_URL = os.getenv("QDRANT_URL", "http://localhost:6333")
+
 try:
-    client = QdrantClient(url="http://localhost:6333")
+    client = QdrantClient(url=QDRANT_URL)
     print(client.get_collections())
 except Exception as e:
-    print(f"[WARN] Qdrant not available at localhost:6333 - {e}")
+    print(f"[WARN] Qdrant not available at {QDRANT_URL} - {e}")
     client = None
 
 embeddings = GoogleGenerativeAIEmbeddings(model="gemini-embedding-001")

@@ -9,7 +9,7 @@ from typing import Any, Dict, List
 
 from langchain_core.output_parsers import PydanticOutputParser
 
-from .schemas import DashboardOutput, PlannerTask
+from .schemas import DashboardOutput, PlannerTask, build_dashboard_output
 
 logger = logging.getLogger(__name__)
 
@@ -38,7 +38,7 @@ def _parse_dashboard_fallback(text: str) -> DashboardOutput:
     cleaned = _extract_json(text)
     data = json.loads(cleaned)
 
-    return DashboardOutput(
+    return build_dashboard_output(
         summary=data.get("summary", ""),
         display=data.get("display", "table"),
         table=data.get("table", []),
@@ -60,7 +60,7 @@ def run_formatter(
 
 Bạn là Dashboard Formatter AI.
 
-Nhiệm vụ của bạn là chuyển đổi kết quả truy vấn SQL thành dữ liệu dashboard theo đúng định dạng được yêu cầu. Dashboard phải phản ánh chính xác dữ liệu từ cơ sở dữ liệu và phù hợp để hiển thị trên giao diện.
+Nhiệm vụ của bạn là chuyển đổi kết quả truy vấn SQL thành dữ liệu dashboard theo đúng định dạng JSON được yêu cầu.
 
 ========================
 THÔNG TIN ĐẦU VÀO
@@ -69,11 +69,9 @@ THÔNG TIN ĐẦU VÀO
 Câu hỏi của người dùng:
 {user_question}
 
-Kiểu hiển thị:
-{task.display}
+Kiểu hiển thị: {task.display}
 
-Loại biểu đồ:
-{task.chart_type}
+Loại biểu đồ: {task.chart_type}
 
 Kết quả SQL:
 {sql_result}
@@ -82,245 +80,321 @@ Kết quả SQL:
 NGUYÊN TẮC CHUNG
 ========================
 
-Các quy tắc dưới đây là BẮT BUỘC.
-
-Mức độ ưu tiên khi xử lý:
-
 1. Độ chính xác của dữ liệu
 2. Khả năng đọc
 3. Tính nhất quán
 4. Tính thẩm mỹ
 
-Không được:
-
-- Thêm dữ liệu không có trong kết quả SQL.
-- Xóa dữ liệu.
-- Thay đổi giá trị dữ liệu.
+KHÔNG ĐƯỢC:
+- Thêm, xóa, thay đổi giá trị dữ liệu gốc từ SQL.
 - Tự suy luận dữ liệu còn thiếu.
 - Thay đổi ý nghĩa của dữ liệu.
 - Tự ý sắp xếp lại dữ liệu nếu SQL không yêu cầu.
 
-Không sử dụng màu ngẫu nhiên.
-
-Màu sắc phải phản ánh ý nghĩa của dữ liệu khi phù hợp.
-
-Ví dụ:
-- Doanh thu, lợi nhuận, tăng trưởng → ưu tiên các tông tích cực.
-- Chi phí, lỗ, giảm → ưu tiên các tông cảnh báo.
-- Thông tin trung lập → ưu tiên các tông trung tính.
-
-Nếu dữ liệu không mang ý nghĩa đặc biệt, hãy tự động chọn bảng màu hiện đại và dễ đọc.
 ========================
 QUY TẮC THEO DISPLAY
 ========================
 
-Nếu display là "kpi":
+Nếu display = "chart":
+- Sinh đầy đủ: summary, display="chart", chart (type, data.labels, data.datasets, options)
+- KHÔNG sinh table (để mảng rỗng)
 
-- Chỉ tạo dữ liệu KPI.
-- Không sinh labels.
-- Không sinh datasets.
-- Không sinh bất kỳ style nào của chart.
+Nếu display = "kpi":
+- Chỉ sinh summary là chuỗi KPI (vd: "Tổng doanh thu: 1,234,567 VND")
+- display="kpi", chart=null, table=[]
 
-Nếu display là "table":
-
-- Chỉ tạo dữ liệu bảng.
-- Không sinh chart.
-- Không sinh style.
-
-Nếu display là "chart":
-
-- Sinh đầy đủ dữ liệu biểu đồ.
-- Sinh labels.
-- Sinh datasets.
-- Sinh đầy đủ style cho biểu đồ.
+Nếu display = "table":
+- Chỉ sinh table (mảng các object), summary mô tả bảng, chart=null
 
 ========================
-XỬ LÝ DỮ LIỆU
+QUY TẮC CHI TIẾT CHO TỪNG LOẠI CHART
 ========================
 
-Nếu kết quả SQL không có dữ liệu:
+--- BAR CHART (type: "bar") ---
+- Mỗi dataset: backgroundColor là màu đặc (solid), borderColor cùng tông đậm hơn
+- borderWidth: 1 hoặc 2 (số nguyên)
+- borderRadius: 4 đến 8 (số nguyên)
+- fill: false
+- tension: 0
+- KHÔNG set "type" trong dataset
+- KHÔNG set "yAxisID" trong dataset
+- KHÔNG set "stack"
 
-- Không tạo biểu đồ.
-- Trả về trạng thái "Không có dữ liệu".
-- Không sinh labels hoặc datasets rỗng.
+--- LINE CHART (type: "line") ---
+- Mỗi dataset: borderColor BẮT BUỘC
+- backgroundColor: chỉ set khi fill=true, dùng màu cùng tông với borderColor, opacity ~10-20%
+- fill: mặc định false, chỉ true nếu là area chart
+- tension: 0.2 đến 0.4 (số thực)
+- borderWidth: 2 hoặc 3 (số nguyên)
+- KHÔNG set "type" trong dataset
+- KHÔNG set "yAxisID" trong dataset
+- KHÔNG set "borderRadius"
 
-Nếu dữ liệu quá lớn:
+--- PIE CHART (type: "pie") ---
+- Mỗi dataset: backgroundColor là MẢNG màu (mỗi slice một màu)
+- borderColor là MẢNG màu tương ứng
+- Mỗi slice phải có màu khác biệt rõ ràng
+- KHÔNG set "type", "yAxisID", "fill", "tension", "borderRadius", "stack"
 
-- Chỉ hiển thị lượng dữ liệu phù hợp để biểu đồ dễ đọc.
-- Nếu cần, gom các giá trị rất nhỏ thành "Khác".
-- Không tạo biểu đồ có quá nhiều nhãn chồng chéo.
+--- DOUGHNUT CHART (type: "doughnut") ---
+- Giống pie chart nhưng type = "doughnut"
+
+--- MIXED CHART (type: "mixed") ---
+- MỖI dataset PHẢI có "type": "bar" hoặc "line"
+- MỖI dataset PHẢI có "yAxisID": "y" hoặc "y1" hoặc "y2"...
+- Nếu 2 metric có cùng đơn vị: dùng chung trục y (yAxisID: "y")
+- Nếu 2 metric khác đơn vị: dùng 2 trục y (yAxisID: "y" cho trái, "y1" cho phải)
+- Khi dùng 2 trục y: options.scales phải có cả "y" và "y1"
+- "y" axis: position "left"
+- "y1" axis: position "right", grid.drawOnChartArea: false
+- Mỗi axis nên có title hiển thị tên đơn vị
 
 ========================
-QUY TẮC TẠO BIỂU ĐỒ
+VÍ DỤ CỤ THỂ
 ========================
 
-Chỉ áp dụng khi display = "chart".
+--- BAR CHART ---
+{{
+  "summary": "Doanh thu theo danh mục sản phẩm",
+  "display": "chart",
+  "table": [],
+  "chart": {{
+    "type": "bar",
+    "data": {{
+      "labels": ["Điện tử", "Thời trang", "Thực phẩm"],
+      "datasets": [
+        {{
+          "label": "Doanh thu",
+          "data": [150000000, 85000000, 120000000],
+          "backgroundColor": "rgba(59, 130, 246, 0.75)",
+          "borderColor": "#2563eb",
+          "borderWidth": 1,
+          "borderRadius": 6,
+          "fill": false,
+          "tension": 0
+        }}
+      ]
+    }}
+  }}
+}}
 
-Biểu đồ phải:
+--- LINE CHART ---
+{{
+  "summary": "Doanh thu theo tháng năm 2024",
+  "display": "chart",
+  "table": [],
+  "chart": {{
+    "type": "line",
+    "data": {{
+      "labels": ["T1", "T2", "T3", "T4", "T5", "T6"],
+      "datasets": [
+        {{
+          "label": "Doanh thu",
+          "data": [120000000, 135000000, 110000000, 150000000, 165000000, 142000000],
+          "borderColor": "#f97316",
+          "backgroundColor": "rgba(249, 115, 22, 0.1)",
+          "borderWidth": 2,
+          "fill": true,
+          "tension": 0.35
+        }}
+      ]
+    }}
+  }}
+}}
 
-- Dễ đọc.
-- Hiện đại.
-- Chuyên nghiệp.
-- Giống phong cách Power BI, Tableau hoặc Grafana.
-- Ưu tiên tính rõ ràng hơn trang trí.
+--- PIE CHART ---
+{{
+  "summary": "Cơ cấu doanh thu theo danh mục",
+  "display": "chart",
+  "table": [],
+  "chart": {{
+    "type": "pie",
+    "data": {{
+      "labels": ["Điện tử", "Thời trang", "Thực phẩm", "Gia dụng"],
+      "datasets": [
+        {{
+          "label": "Doanh thu",
+          "data": [150000000, 85000000, 120000000, 65000000],
+          "backgroundColor": ["rgba(59,130,246,0.8)", "rgba(245,158,11,0.8)", "rgba(16,185,129,0.8)", "rgba(239,68,68,0.8)"],
+          "borderColor": ["#3b82f6", "#f59e0b", "#10b981", "#ef4444"],
+          "borderWidth": 1
+        }}
+      ]
+    }}
+  }}
+}}
+
+--- DOUGHNUT CHART ---
+{{
+  "summary": "Cơ cấu đơn hàng theo trạng thái",
+  "display": "chart",
+  "table": [],
+  "chart": {{
+    "type": "doughnut",
+    "data": {{
+      "labels": ["Hoàn thành", "Đang xử lý", "Đã hủy", "Trả lại"],
+      "datasets": [
+        {{
+          "label": "Đơn hàng",
+          "data": [450, 120, 35, 18],
+          "backgroundColor": ["rgba(16,185,129,0.8)", "rgba(59,130,246,0.8)", "rgba(239,68,68,0.8)", "rgba(245,158,11,0.8)"],
+          "borderColor": ["#10b981", "#3b82f6", "#ef4444", "#f59e0b"],
+          "borderWidth": 1
+        }}
+      ]
+    }}
+  }}
+}}
+
+--- MIXED CHART (Line + Bar) ---
+{{
+  "summary": "Doanh thu và số đơn theo tháng",
+  "display": "chart",
+  "table": [],
+  "chart": {{
+    "type": "mixed",
+    "data": {{
+      "labels": ["T1", "T2", "T3", "T4", "T5", "T6"],
+      "datasets": [
+        {{
+          "label": "Doanh thu",
+          "data": [120000000, 135000000, 110000000, 150000000, 165000000, 142000000],
+          "type": "bar",
+          "backgroundColor": "rgba(59, 130, 246, 0.75)",
+          "borderColor": "#2563eb",
+          "borderWidth": 1,
+          "borderRadius": 6,
+          "yAxisID": "y",
+          "fill": false,
+          "tension": 0
+        }},
+        {{
+          "label": "Số đơn hàng",
+          "data": [1200, 1350, 1100, 1500, 1650, 1420],
+          "type": "line",
+          "borderColor": "#f97316",
+          "backgroundColor": "rgba(249, 115, 22, 0.1)",
+          "borderWidth": 2,
+          "fill": true,
+          "tension": 0.35,
+          "yAxisID": "y1"
+        }}
+      ]
+    }},
+    "options": {{
+      "scales": {{
+        "x": {{ "ticks": {{ "color": "#666666" }}, "grid": {{ "color": "#dddddd", "drawOnChartArea": true }}, "beginAtZero": true }},
+        "y": {{ "ticks": {{ "color": "#666666" }}, "grid": {{ "color": "#dddddd", "drawOnChartArea": true }}, "beginAtZero": true, "position": "left", "title": {{ "display": true, "text": "Doanh thu (VND)", "color": "#666666", "font": {{ "size": 11, "weight": "500" }} }} }},
+        "y1": {{ "ticks": {{ "color": "#666666" }}, "grid": {{ "color": "#dddddd", "drawOnChartArea": false }}, "beginAtZero": true, "position": "right", "title": {{ "display": true, "text": "Số đơn hàng", "color": "#666666", "font": {{ "size": 11, "weight": "500" }} }} }}
+      }}
+    }}
+  }}
+}}
+
+--- MIXED CHART (2 Bar) ---
+{{
+  "summary": "Doanh thu và lợi nhuận theo tháng",
+  "display": "chart",
+  "table": [],
+  "chart": {{
+    "type": "mixed",
+    "data": {{
+      "labels": ["T1", "T2", "T3", "T4", "T5", "T6"],
+      "datasets": [
+        {{
+          "label": "Doanh thu",
+          "data": [120000000, 135000000, 110000000, 150000000, 165000000, 142000000],
+          "type": "bar",
+          "backgroundColor": "rgba(59, 130, 246, 0.75)",
+          "borderColor": "#2563eb",
+          "borderWidth": 1,
+          "borderRadius": 6,
+          "yAxisID": "y",
+          "fill": false,
+          "tension": 0
+        }},
+        {{
+          "label": "Lợi nhuận",
+          "data": [24000000, 27000000, 22000000, 30000000, 33000000, 28400000],
+          "type": "bar",
+          "backgroundColor": "rgba(16, 185, 129, 0.75)",
+          "borderColor": "#10b981",
+          "borderWidth": 1,
+          "borderRadius": 6,
+          "yAxisID": "y",
+          "fill": false,
+          "tension": 0
+        }}
+      ]
+    }}
+  }}
+}}
 
 ========================
 MÀU SẮC
 ========================
 
-AI tự lựa chọn bảng màu phù hợp với từng biểu đồ.
+Tự động chọn bảng màu phù hợp:
+- Doanh thu, lợi nhuận, tăng trưởng → tông xanh dương, xanh lá
+- Chi phí, lỗ, giảm → tông cam, đỏ
+- Trung tính → tông xám, tím
 
 Yêu cầu:
-
-- Màu sắc phải hài hòa, hiện đại và chuyên nghiệp.
-- Có độ tương phản tốt trên cả giao diện sáng và tối.
-- Ưu tiên các màu có độ bão hòa trung bình đến cao.
-- Tránh màu quá nhạt, quá sáng, màu neon hoặc khó phân biệt.
-- Không sử dụng cùng một bảng màu cho mọi biểu đồ.
-- Tự động chọn bảng màu phù hợp với ngữ cảnh và số lượng dữ liệu.
-- Ưu tiên các bảng màu dễ phân biệt đối với người mắc các dạng mù màu phổ biến.
-- Màu sắc phải giúp người dùng phân biệt dữ liệu nhanh chóng thay vì chỉ mang tính trang trí.
-Quy tắc:
-
-- Có độ tương phản tốt trên nền sáng và tối.
-- Không dùng màu neon.
-- Không dùng màu quá nhạt.
-- Không dùng màu khó phân biệt.
-- Không dùng cùng một màu cho mọi biểu đồ.
-- Tự động chọn bảng màu phù hợp với dữ liệu.
-
-========================
-NHIỀU DATASET
-========================
-
-Nếu biểu đồ có nhiều dataset:
-
-- Mỗi dataset phải có màu khác biệt rõ ràng.
-- Khoảng cách giữa các màu phải đủ lớn để dễ phân biệt.
-- Tránh các màu gần giống nhau.
-- Giữ tổng thể bảng màu hài hòa.
-- Chỉ sử dụng số lượng màu cần thiết.
-- Nếu có nhiều dataset, tự động chọn bảng màu có độ tương phản cao.
-========================
-borderColor
-========================
-
-Mỗi dataset phải có:
-
-- borderColor cùng tông với backgroundColor.
-- borderColor đậm hơn backgroundColor.
-- borderWidth = 2.
-
-========================
-backgroundColor
-========================
-
-Bar Chart
-
-- Dùng màu đặc.
-- Có thể dùng nhiều màu nếu phù hợp.
-
-Line Chart
-
-- Nếu fill = true:
-    dùng backgroundColor với opacity khoảng 20%.
-
-- Nếu fill = false:
-    có thể bỏ backgroundColor.
-
-Pie / Doughnut
-
-- Mỗi lát có màu khác biệt rõ.
-- Hai lát liền kề không được dùng màu gần giống nhau.
-- Nếu có trên 10 lát:
-    gom các phần rất nhỏ thành "Khác".
-
-========================
-BAR CHART
-========================
-
-- borderRadius từ 4 đến 8.
-- Khoảng cách giữa các cột hợp lý.
-- Không để biểu đồ quá dày đặc.
-
-========================
-LINE CHART
-========================
-
-- tension từ 0.2 đến 0.4.
-- fill = false mặc định.
-- Chỉ dùng fill = true nếu Area Chart thể hiện dữ liệu tốt hơn.
-- Point không quá lớn.
-
-Nếu dữ liệu là chuỗi thời gian:
-
-- Ưu tiên Line Chart.
-
-========================
-PIE CHART
-========================
-
-- Màu sắc có độ tương phản cao.
-- Không có hai lát gần giống nhau.
-- Không quá nhiều lát.
-
-========================
-LABELS
-========================
-
-Axis Label
-
-- #666666
-
-Legend
-
-- #333333
-
-========================
-STYLE
-========================
-
-Style và dữ liệu phải tách biệt.
-
-Không được:
-
-- Đưa màu vào labels.
-- Đưa style vào data.
-- Thay đổi dữ liệu để phù hợp với style.
+- Hài hòa, hiện đại, chuyên nghiệp
+- Độ tương phản tốt trên cả sáng và tối
+- Độ bão hòa trung bình đến cao
+- Không màu neon, quá nhạt, khó phân biệt
+- Không dùng cùng một bảng màu cho mọi biểu đồ
+- Mỗi dataset phải có màu khác biệt rõ ràng
 
 ========================
 OUTPUT
 ========================
 
 BẮT BUỘC:
+- Chỉ trả về JSON hợp lệ, đúng schema
+- Không giải thích, không markdown, không ghi chú, không văn bản ngoài JSON
+- Dữ liệu phải khớp chính xác với kết quả SQL
+- KHÔNG thêm dữ liệu không có trong SQL
+- borderWidth phải là số nguyên (integer), không được dùng số thập phân
 
-- Chỉ trả về đúng định dạng do formatter_parser yêu cầu.
-- Không giải thích.
-- Không thêm markdown.
-- Không thêm ghi chú.
-- Không thêm văn bản ngoài output.
-- Output phải hợp lệ để parser có thể parse ngay.
-- Mọi giá trị phải tuân thủ đúng schema được yêu cầu.
-
-Bây giờ hãy chuyển đổi kết quả SQL thành dữ liệu dashboard.
+Bây giờ hãy tạo output cho:
+- Kiểu hiển thị: {task.display}
+- Loại biểu đồ: {task.chart_type}
+- Dữ liệu SQL: {sql_result}
 """
 
     response = llm.invoke(prompt)
     raw = response.content
 
+    logger.debug(f"Raw LLM output: {raw[:500]}...")
+
     # Try Pydantic parser first, fallback to manual JSON
     try:
         dashboard = formatter_parser.parse(raw)
+        logger.info(f"Pydantic parser succeeded for {dashboard.display}")
     except Exception as e:
         logger.warning(f"Pydantic formatter failed: {e}, trying fallback...")
         try:
             dashboard = _parse_dashboard_fallback(raw)
+            logger.info(f"Fallback parser succeeded for {dashboard.display}")
+            if dashboard.chart:
+                logger.info(f"  Chart type: {dashboard.chart.type}, datasets: {len(dashboard.chart.data.datasets)}")
         except Exception as e2:
             logger.error(f"Formatter fallback also failed: {e2}")
             logger.debug(f"Raw LLM output: {raw}")
-            # Return minimal valid output
+            # Return minimal valid output with summary
+            import json as _json
+            try:
+                # Try to extract at least the summary
+                cleaned = _extract_json(raw)
+                data = _json.loads(cleaned)
+                summary = data.get("summary", "Error formatting result")
+            except Exception:
+                summary = "Error formatting result"
+            
             dashboard = DashboardOutput(
-                summary="Error formatting result",
+                summary=summary,
                 display="table",
                 table=[],
                 chart=None,

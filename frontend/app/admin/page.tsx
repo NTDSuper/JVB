@@ -98,13 +98,13 @@ function AdminPage() {
   };
 
   const handleEditClick = (user: User) => {
-  setSelectedUser(user);
-  setEditUserForm({
-    username: user.username,
-    email: user.email,
-    full_name: user.full_name || "",
-    is_active: user.is_active,
-    role: Array.isArray(user.role) ? user.role[0] ?? "" : user.role ?? "",
+    setSelectedUser(user);
+    setEditUserForm({
+      username: user.username,
+      email: user.email,
+      full_name: user.full_name || "",
+      is_active: user.is_active,
+      role: Array.isArray(user.role) ? user.role[0] ?? "" : user.role ?? "",
     });
     setShowEditModal(true);
   };
@@ -154,42 +154,62 @@ function AdminPage() {
   };
 
   const handleRoleToggle = (roleName: string) => {
-  setEditUserForm((prev) => ({
-    ...prev,
-    role: roleName,
-  }));
-};
+    setEditUserForm((prev) => ({
+      ...prev,
+      role: roleName,
+    }));
+  };
 
   if (loading) {
     return (
-      <div className="page-container">
-        <div className="skeleton" style={{ height: 40, width: "30%", marginBottom: 24 }} />
-        <div className="skeleton" style={{ height: 300 }} />
+      <div className="relative min-h-screen bg-[var(--bg-main)] px-4 py-8 sm:px-8">
+        <div className="mx-auto max-w-7xl">
+          <div className="skeleton" style={{ height: 40, width: "30%", marginBottom: 24 }} />
+          <div className="skeleton" style={{ height: 300 }} />
+        </div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="page-container">
-        <div className="empty-state">
-          <div className="empty-state-icon">🔒</div>
-          <div className="empty-state-title">{error}</div>
-          <p className="empty-state-text">
-            Please contact your administrator if you believe this is a mistake.
-          </p>
+      <div className="relative min-h-screen bg-[var(--bg-main)] px-4 py-8 sm:px-8">
+        <div className="mx-auto max-w-7xl">
+          <div className="flex flex-col items-center justify-center gap-3 py-16 text-center">
+            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-[var(--bg-input)] text-[var(--text-muted)]">
+              <span className="text-2xl">🔒</span>
+            </div>
+            <div>
+              <div className="text-sm font-semibold text-[var(--text-primary)] mb-1">{error}</div>
+              <p className="text-xs text-[var(--text-muted)]">
+                Please contact your administrator if you believe this is a mistake.
+              </p>
+            </div>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <>
-      <div className="page-container animate-fade-in">
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 32, gap: 16, flexWrap: "wrap" }}>
+    <div className="container mx-auto min-h-screen px-4 py-8">
+      {/* Signature: Ambient gradient blobs */}
+      <div className="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
+        <div className="absolute top-0 right-0 h-96 w-96 rounded-full bg-gradient-to-br from-[#FF5A1F]/8 to-transparent blur-3xl transition-opacity duration-500 dark:from-[#FF5A1F]/15" />
+        <div className="absolute bottom-0 left-0 h-96 w-96 rounded-full bg-gradient-to-tr from-[#6366F1]/8 to-transparent blur-3xl transition-opacity duration-500 dark:from-[#6366F1]/15" />
+      </div>
+
+      <div className="mx-auto max-w-7xl">
+        {/* ── Page Header ── */}
+        <div className="mb-10 flex items-center justify-between">
           <div>
-            <h1 className="page-title" style={{ margin: 0 }}>User Management</h1>
-            <p className="page-subtitle" style={{ margin: "4px 0 0 0" }}>
+            <h1
+              className="text-3xl font-bold text-[var(--text-primary)]"
+              style={{ fontFamily: "'Baloo 2', sans-serif" }}
+            >
+              User Management
+            </h1>
+            <p className="mt-1 text-sm text-[var(--text-muted)]">
               Admin panel to manage users accounts, permissions, and status
             </p>
           </div>
@@ -198,68 +218,98 @@ function AdminPage() {
           </button>
         </div>
 
-        <div className="card animate-slide-up" style={{ padding: 0, overflow: "hidden" }}>
-          <div style={{ overflowX: "auto" }}>
-            <table>
-              <thead>
-                <tr style={{ background: "rgba(51, 65, 85, 0.3)" }}>
-                  <th style={{ padding: "16px 24px" }}>ID</th>
-                  <th>Username</th>
-                  <th>Email</th>
-                  <th>Roles</th>
-                  <th>Status</th>
-                  <th style={{ textAlign: "right", paddingRight: 24 }}>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {users.map((user) => (
-                  <tr key={user.id} style={{ borderBottom: "1px solid var(--border)" }}>
-                    <td style={{ padding: "16px 24px", color: "var(--text-muted)", fontSize: 13 }}>
-                      #{user.id}
-                    </td>
-                    <td>{user.username}</td>
-                    <td>{user.email}</td>
-                    <td>
-                      <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
-                        {(user.role ?? []).map((r) => (
-                          <span key={r} className="badge badge-info" style={{ fontSize: 11 }}>
-                            {r}
-                          </span>
-                        ))}
-                      </div>
-                    </td>
-                    <td>
-                      <button
-                        onClick={() => toggleUserStatus(user)}
-                        className={`badge ${user.is_active ? "badge-success" : "badge-danger"}`}
-                        style={{ border: "none", cursor: "pointer" }}
-                        title="Click to toggle status"
-                      >
-                        {user.is_active ? "Active" : "Inactive"}
-                      </button>
-                    </td>
-                    <td style={{ textAlign: "right", paddingRight: 24 }}>
-                      <div style={{ display: "inline-flex", gap: 8 }}>
-                        <button
-                          className="btn btn-ghost btn-sm"
-                          onClick={() => handleEditClick(user)}
-                          style={{ borderColor: "rgba(245, 158, 11, 0.3)", color: "var(--warning)" }}
-                        >
-                          Edit
-                        </button>
-                        <button
-                          className="btn btn-ghost btn-sm"
-                          onClick={() => handleDelete(user.id)}
-                          style={{ borderColor: "rgba(239, 68, 68, 0.3)", color: "var(--danger)" }}
-                        >
-                          Delete
-                        </button>
-                      </div>
-                    </td>
+        {/* Users Table Card */}
+        <div className="rounded-2xl bg-[var(--bg-card)] shadow-[0_1px_2px_rgba(0,0,0,0.04),0_8px_24px_-12px_rgba(0,0,0,0.08)] overflow-hidden transition-all duration-300 hover:shadow-[0_1px_2px_rgba(0,0,0,0.06),0_12px_32px_-12px_rgba(0,0,0,0.12)] dark:shadow-[0_1px_2px_rgba(0,0,0,0.3),0_8px_24px_-12px_rgba(0,0,0,0.4)] dark:hover:shadow-[0_1px_2px_rgba(0,0,0,0.4),0_12px_32px_-12px_rgba(0,0,0,0.5)]">
+          {/* Decorative top-edge gradient stripe */}
+          <div className="absolute left-0 right-0 top-0 h-1 bg-gradient-to-r from-[#FF5A1F] via-[#6366F1] to-[#1F9D55] opacity-80 transition-opacity duration-300 dark:opacity-100" />
+          
+          <div className="p-6">
+            <div className="flex items-center gap-2.5 mb-6">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#FFF4EC] text-[#E14E17] transition-all duration-300 dark:bg-[#2A1A10] dark:text-[#FB923C]">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+              </div>
+              <div>
+                <h2 className="text-base font-bold text-[var(--text-primary)]" style={{ fontFamily: "'Baloo 2', sans-serif" }}>
+                  All Users
+                </h2>
+                <p className="text-xs text-[var(--text-muted)]">
+                  {users.length} registered account{users.length === 1 ? "" : "s"}
+                </p>
+              </div>
+            </div>
+            <div className="h-px bg-gradient-to-r from-[#FF5A1F]/40 via-[var(--border)] to-[#6366F1]/40 mb-6" />
+
+            <div style={{ overflowX: "auto" }}>
+              <table>
+                <thead>
+                  <tr>
+                    <th className="text-left px-4 py-3 text-[10px] font-semibold uppercase tracking-widest text-[var(--text-muted)]">ID</th>
+                    <th className="text-left px-4 py-3 text-[10px] font-semibold uppercase tracking-widest text-[var(--text-muted)]">Username</th>
+                    <th className="text-left px-4 py-3 text-[10px] font-semibold uppercase tracking-widest text-[var(--text-muted)]">Email</th>
+                    <th className="text-left px-4 py-3 text-[10px] font-semibold uppercase tracking-widest text-[var(--text-muted)]">Roles</th>
+                    <th className="text-left px-4 py-3 text-[10px] font-semibold uppercase tracking-widest text-[var(--text-muted)]">Status</th>
+                    <th className="text-right px-4 py-3 text-[10px] font-semibold uppercase tracking-widest text-[var(--text-muted)]">Actions</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {users.map((user) => (
+                    <tr key={user.id} className="border-t border-[var(--border)] transition hover:bg-[var(--bg-hover)]">
+                      <td className="px-4 py-3 text-sm text-[var(--text-muted)] font-mono">
+                        #{user.id}
+                      </td>
+                      <td className="px-4 py-3 text-sm font-semibold text-[var(--text-primary)]">
+                        {user.username}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-[var(--text-secondary)]">
+                        {user.email}
+                      </td>
+                      <td className="px-4 py-3">
+                        <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+                          {(user.role ?? []).map((r) => (
+                            <span key={r} className="inline-flex items-center rounded-full bg-[#EEF2FF] px-2.5 py-1 text-[10px] font-bold text-[#4F46E5] dark:bg-[#1E1B4B] dark:text-[#A5B4FC]">
+                              {r}
+                            </span>
+                          ))}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <button
+                          onClick={() => toggleUserStatus(user)}
+                          className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[11px] font-bold transition-all ${
+                            user.is_active
+                              ? "bg-[#EAF7EE] text-[#1F9D55]"
+                              : "bg-[#F5F5F3] text-[#6B7280]"
+                          }`}
+                          style={{ border: "none", cursor: "pointer" }}
+                          title="Click to toggle status"
+                        >
+                          <div className={`h-1.5 w-1.5 rounded-full ${user.is_active ? "bg-[#1F9D55]" : "bg-[#6B7280]"}`} />
+                          {user.is_active ? "Active" : "Inactive"}
+                        </button>
+                      </td>
+                      <td style={{ textAlign: "right" }}>
+                        <div style={{ display: "inline-flex", gap: 8 }}>
+                          <button
+                            className="btn btn-ghost btn-sm"
+                            onClick={() => handleEditClick(user)}
+                            style={{ borderColor: "rgba(245, 158, 11, 0.3)", color: "var(--warning)" }}
+                          >
+                            Edit
+                          </button>
+                          <button
+                            className="btn btn-ghost btn-sm"
+                            onClick={() => handleDelete(user.id)}
+                            style={{ borderColor: "rgba(239, 68, 68, 0.3)", color: "var(--danger)" }}
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
 
@@ -377,7 +427,7 @@ function AdminPage() {
                           padding: "6px 12px",
                           borderRadius: 8,
                           border: `2px solid ${(editUserForm.role ?? "") === role.name ? "var(--primary)" : "var(--border)"}`,
-                          background: (editUserForm.role ?? "") === role.name ? "rgba(99, 102, 241, 0.1)" : "transparent",
+                          background: (editUserForm.role ?? "") === role.name ? "var(--bg-hover)" : "transparent",
                           cursor: "pointer",
                           userSelect: "none",
                           fontSize: 13,
@@ -428,7 +478,7 @@ function AdminPage() {
           onClose={() => setToast(null)}
         />
       )}
-    </>
+    </div>
   );
 }
 

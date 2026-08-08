@@ -43,7 +43,7 @@ VALID_TRANSITIONS = {
     ORDER_STATUS_CANCELLED: [],
 }
 
-#======
+# ======
 
 IN_PROGRESS_TIMEOUT_MINUTES = 5
 
@@ -150,7 +150,9 @@ def auto_cancel_expired_in_progress_orders():
                 continue
 
     except Exception as e:
-        logger.error(f"[Scheduler] Error in auto_cancel_expired_in_progress_orders: {e}")
+        logger.error(
+            f"[Scheduler] Error in auto_cancel_expired_in_progress_orders: {e}"
+        )
         db.rollback()
     finally:
         db.close()
@@ -167,7 +169,6 @@ def validate_status_transition(current_status: str, new_status: str):
             detail=f"Cannot transition order from '{current_status}' to '{new_status}'. "
             f"Allowed transitions: {allowed}",
         )
-
 
 
 class OrderService:
@@ -521,9 +522,14 @@ class OrderService:
         skip: int = 0,
         limit: int = 20,
         status: str = None,
+        min_amount: float = None,
+        max_amount: float = None,
+        min_items: int = None,
+        max_items: int = None,
     ) -> OrderListPaginatedResponse:
         """
-        Manager/Admin lay danh sach tat ca don hang co phan trang va filter theo status.
+        Manager/Admin lay danh sach tat ca don hang co phan trang va filter theo status,
+        tổng tiền (min_amount, max_amount) và số lượng item (min_items, max_items).
         Yeu cau permission 'order:read'.
         """
         # Kiem tra quyen bang permission code
@@ -536,7 +542,7 @@ class OrderService:
 
         PaymentService.check_expired_payments()
         auto_cancel_expired_in_progress_orders()
-        
+
         # Xay dung query
         query = db.query(Order)
 
@@ -555,27 +561,55 @@ class OrderService:
                 )
             query = query.filter(Order.status == status)
 
-        # Dem tong so ban ghi
+        # Filter theo tổng tiền
+        if min_amount is not None:
+            query = query.filter(Order.total_amount >= min_amount)
+        if max_amount is not None:
+            query = query.filter(Order.total_amount <= max_amount)
+
+        # Filter theo số lượng items trong database query
+        if min_items is not None or max_items is not None:
+            from sqlalchemy import func
+            # Đếm số lượng items cho mỗi order và filter
+            item_count_subquery = (
+                db.query(
+                    OrderItem.order_id,
+                    func.count(OrderItem.id).label('item_count')
+                )
+                .group_by(OrderItem.order_id)
+                .subquery()
+            )
+            
+            query = query.outerjoin(
+                item_count_subquery, Order.id == item_count_subquery.c.order_id
+            )
+            
+            if min_items is not None:
+                # Nếu không có item nào thì item_count = 0, nên cần check >= min_items
+                query = query.filter(
+                    func.coalesce(item_count_subquery.c.item_count, 0) >= min_items
+                )
+            if max_items is not None:
+                query = query.filter(
+                    func.coalesce(item_count_subquery.c.item_count, 0) <= max_items
+                )
+        
+        # Dem tong so ban ghi SAU khi apply tat ca filters
         total_count = query.count()
 
         # Lay du lieu phan trang
-        orders = (
-            query
-            .order_by(Order.id.desc())
-            .offset(skip)
-            .limit(limit)
-            .all()
-        )
+        orders = query.order_by(Order.id.desc()).offset(skip).limit(limit).all()
 
         items = []
         for order in orders:
+            item_count = len(order.items)
             items.append(
                 OrderListResponse(
                     id=order.id,
                     user_id=order.user_id,
                     total_amount=float(order.total_amount),
                     status=order.status,
-                    item_count=len(order.items),
+                    item_count=item_count,
                 )
             )
 

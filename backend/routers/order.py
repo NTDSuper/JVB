@@ -44,13 +44,21 @@ def get_all_orders(
     db: Session = Depends(get_db),
     skip: int = Query(0, ge=0, description="Number of records to skip"),
     limit: int = Query(20, ge=1, le=100, description="Max records per page"),
-    status: str = Query(None, description="Filter by order status: pending, in_progress, completed, cancelled"),
+    status: str = Query(
+        None,
+        description="Filter by order status: pending, in_progress, completed, cancelled",
+    ),
+    min_amount: float = Query(None, ge=0, description="Minimum total amount filter"),
+    max_amount: float = Query(None, ge=0, description="Maximum total amount filter"),
+    min_items: int = Query(None, ge=1, description="Minimum item count filter"),
+    max_items: int = Query(None, ge=1, description="Maximum item count filter"),
 ):
     """
     Manager/Admin: Lấy danh sách tất cả đơn hàng.
-    Hỗ trợ phân trang (skip, limit) và lọc theo trạng thái (status).
+    Hỗ trợ phân trang (skip, limit) và lọc theo trạng thái (status),
+    tổng tiền (min_amount, max_amount) và số lượng item (min_items, max_items).
     """
-    return OrderService.get_all_orders(current_user, db, skip, limit, status)
+    return OrderService.get_all_orders(current_user, db, skip, limit, status, min_amount, max_amount, min_items, max_items)
 
 
 @router.get("/{order_id}", response_model=OrderResponse)

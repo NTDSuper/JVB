@@ -44,7 +44,7 @@ export default function LoginForm() {
         />
       </div>
 
-      <div className="auth-field" style={{ marginBottom: 24 }}>
+      <div className="auth-field">
         <label className="form-label">Password</label>
         <input
           type="password"
@@ -61,7 +61,7 @@ export default function LoginForm() {
         type="submit"
         disabled={loading}
         className="btn btn-primary btn-lg"
-        style={{ width: "100%", marginBottom: 16 }}
+        style={{ width: "100%", marginBottom: 20 }}
       >
         {loading ? "Signing in..." : "Sign In"}
       </button>

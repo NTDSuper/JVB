@@ -76,6 +76,13 @@ export interface Product {
   image_url?: string;
   status: string;
   attributes?: ProductAttribute[];
+  category_name?: string;
+  deleted_at?: string;
+  barcode?: string;
+  brand?: string;
+  unit?: string;
+  expiry_date?: string;
+  created_at?: string;
 }
 
 // ── Cart ──

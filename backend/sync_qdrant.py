@@ -9,6 +9,7 @@ Usage:
     python sync_qdrant.py --interval 30             # every 30 minutes
 """
 
+import os
 import sys
 import logging
 import hashlib
@@ -34,11 +35,19 @@ logger = logging.getLogger(__name__)
 
 
 # ---------- Qdrant setup ----------
-_qdrant_client = QdrantClient(url="http://localhost:6333")
+QDRANT_URL = os.getenv("QDRANT_URL", "http://localhost:6333")
+_qdrant_client = QdrantClient(url=QDRANT_URL)
 
 COLLECTION_NAME = "products"
 VECTOR_SIZE = 3072
-_qdrant_client.delete_collection("products")
+if not _qdrant_client.collection_exists(COLLECTION_NAME):
+    _qdrant_client.create_collection(
+        collection_name=COLLECTION_NAME,
+        vectors_config=VectorParams(
+            size=VECTOR_SIZE,
+            distance=Distance.COSINE,
+        ),
+    )
 existing = _qdrant_client.get_collections()
 collection_names = [c.name for c in existing.collections]
 if COLLECTION_NAME not in collection_names:
@@ -149,101 +158,6 @@ def sync_products_to_qdrant():
         logger.exception("Error while syncing to Qdrant: %s", e)
 
 
-# ---------- Scheduling ----------
-def run_cron(hour: int = 2, minute: int = 0):
-    """Run daily cron job."""
-    scheduler = BlockingScheduler()
-
-    scheduler.add_job(
-        sync_products_to_qdrant,
-        "cron",
-        hour=hour,
-        minute=minute,
-        id="sync_qdrant_daily",
-        name="Daily sync products to Qdrant",
-    )
-
-    logger.info(
-        "Cron job scheduled daily at %02d:%02d. Press Ctrl+C to stop.", hour, minute
-    )
-    logger.info("Running first sync now...")
-    sync_products_to_qdrant()
-
-    try:
-        scheduler.start()
-    except KeyboardInterrupt:
-        logger.info("Cron job stopped.")
-
-
-def run_interval(interval_minutes: int = 30):
-    """Run interval-based schedule."""
-    scheduler = BlockingScheduler()
-
-    scheduler.add_job(
-        sync_products_to_qdrant,
-        "interval",
-        minutes=interval_minutes,
-        id="sync_qdrant_interval",
-        name="Periodic sync products to Qdrant",
-        next_run_time=datetime.now(),
-    )
-
-    logger.info(
-        "Sync scheduled every %d minutes. Press Ctrl+C to stop.", interval_minutes
-    )
-    try:
-        scheduler.start()
-    except KeyboardInterrupt:
-        logger.info("Schedule stopped.")
-
-
-def parse_args():
-    """Parse command line arguments."""
-    args = {
-        "mode": "once",
-        "hour": 2,
-        "minute": 0,
-        "interval": 30,
-    }
-
-    i = 1
-    while i < len(sys.argv):
-        arg = sys.argv[i]
-        if arg == "--cron":
-            args["mode"] = "cron"
-        elif arg == "--interval":
-            args["mode"] = "interval"
-            if i + 1 < len(sys.argv):
-                try:
-                    args["interval"] = int(sys.argv[i + 1])
-                    i += 1
-                except ValueError:
-                    pass
-        elif arg == "--hour":
-            if i + 1 < len(sys.argv):
-                try:
-                    args["hour"] = int(sys.argv[i + 1])
-                    i += 1
-                except ValueError:
-                    pass
-        elif arg == "--minute":
-            if i + 1 < len(sys.argv):
-                try:
-                    args["minute"] = int(sys.argv[i + 1])
-                    i += 1
-                except ValueError:
-                    pass
-        i += 1
-
-    return args
-
-
 if __name__ == "__main__":
-    args = parse_args()
 
-    if args["mode"] == "cron":
-        run_cron(hour=args["hour"], minute=args["minute"])
-    elif args["mode"] == "interval":
-        run_interval(interval_minutes=args["interval"])
-    else:
-        sync_products_to_qdrant()
+    sync_products_to_qdrant()

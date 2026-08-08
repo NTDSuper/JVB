@@ -39,8 +39,12 @@ class DashboardService:
                 task_summaries.append(
                     f"({t.get('display', '?')}: {t.get('question', '?')})"
                 )
-            tasks_str = ", ".join(task_summaries) if task_summaries else f"{widget_count} widget(s)"
-            lines.append(f"  {i}. \"{question}\" → {tasks_str}")
+            tasks_str = (
+                ", ".join(task_summaries)
+                if task_summaries
+                else f"{widget_count} widget(s)"
+            )
+            lines.append(f'  {i}. "{question}" → {tasks_str}')
 
         return "\n".join(lines)
 
@@ -59,8 +63,12 @@ class DashboardService:
                 try:
                     recent_history = get_history_for_user(user_id, skip=0, limit=5)
                     if recent_history:
-                        history_str = DashboardService._format_history_for_prompt(recent_history)
-                        logger.info(f"Loaded {len(recent_history)} history entries for context")
+                        history_str = DashboardService._format_history_for_prompt(
+                            recent_history
+                        )
+                        logger.info(
+                            f"Loaded {len(recent_history)} history entries for context"
+                        )
                 except Exception as e:
                     logger.warning(f"Failed to load history for context: {e}")
 

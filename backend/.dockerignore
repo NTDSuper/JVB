@@ -1,0 +1,16 @@
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+.env
+.env.*
+!.env.example
+test/
+tests/
+*.md
+.git/
+.gitignore
+Dockerfile
+.dockerignore
+output.txt

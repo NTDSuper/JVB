@@ -23,11 +23,13 @@ export function useChat(sessionId: string) {
   const mountedRef = useRef(true);
   const isRefreshingRef = useRef(false);
   const pendingMessageRef = useRef<string | null>(null);
+  const wsProtocol =
+    window.location.protocol === "https:"
+        ? "wss:"
+        : "ws:";
+
   const apiBase =
-    ("http://localhost:8000").replace(
-      /^http/,
-      "ws"
-    );
+    `${wsProtocol}//${window.location.host}`;
 
   const buildUrl = useCallback(() => {
     const token = getToken();

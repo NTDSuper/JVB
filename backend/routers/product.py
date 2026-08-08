@@ -1,8 +1,8 @@
 import json
 import logging
-from typing import List
+from typing import List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
 from database import get_db
@@ -47,16 +47,20 @@ def get_products(
     limit: int = 20,
     refresh: bool = False,
     db: Session = Depends(get_db),
+    category_id: Optional[int] = Query(None, description="Filter by category ID"),
 ):
-    return ProductService.get_products(skip, limit, refresh, db)
+    return ProductService.get_products(skip, limit, refresh, db, category_id)
 
 
-@router.get("/search", response_model=List[ProductResponse])
+@router.get("/search", response_model=PaginatedResponse)
 def search_product(
     keyword: str,
+    skip: int = 0,
+    limit: int = 20,
+    refresh: bool = False,
     db: Session = Depends(get_db),
 ):
-    return ProductService.search_product(keyword, db)
+    return ProductService.search_product(keyword, skip, limit, refresh, db)
 
 
 @router.get("/{product_id}", response_model=ProductResponse)

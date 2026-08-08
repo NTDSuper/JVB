@@ -7,6 +7,7 @@ import { withProtection } from "@/components/ProtectedRouter";
 import Toast from "@/components/Toast";
 import { Order, Payment } from "@/types/dto";
 import { useAuthContext } from "@/auth/contexts/AuthContext";
+import { Clock, Shield, CreditCard, CheckCircle2, XCircle, AlertTriangle, ArrowLeft } from "lucide-react";
 
 function OrderDetailPage() {
   const params = useParams();
@@ -174,17 +175,17 @@ function OrderDetailPage() {
   const getStatusBadgeClass = (status: string) => {
     switch (status.toLowerCase()) {
       case "completed":
-        return "badge-success";
+        return "bg-[#EAF7EE] text-[#1F9D55] dark:bg-[#1A2E22] dark:text-[#34D399]";
       case "pending":
-        return "badge-warning";
+        return "bg-[#FFF7E6] text-[#B9790A] dark:bg-[#2A2010] dark:text-[#FBBF24]";
       case "in_progress":
-        return "badge-info";
+        return "bg-[#EEF2FF] text-[#4F46E5] dark:bg-[#1E1B4B] dark:text-[#A5B4FC]";
       case "cancelled":
       case "failed":
       case "refunded":
-        return "badge-danger";
+        return "bg-[#FEE2E2] text-[#DC2626] dark:bg-[#2A1010] dark:text-[#FB7185]";
       default:
-        return "badge-neutral";
+        return "bg-[var(--bg-input)] text-[var(--text-secondary)]";
     }
   };
 
@@ -198,11 +199,13 @@ function OrderDetailPage() {
 
   if (loading) {
     return (
-      <div className="page-container">
-        <div className="skeleton" style={{ height: 40, width: "30%", marginBottom: 24 }} />
-        <div style={{ display: "flex", gap: 24, flexWrap: "wrap" }}>
-          <div className="skeleton" style={{ flex: 2, height: 300 }} />
-          <div className="skeleton" style={{ flex: 1, height: 300 }} />
+      <div className="relative min-h-screen bg-[var(--bg-main)] px-4 py-8 sm:px-8">
+        <div className="mx-auto max-w-7xl">
+          <div className="skeleton" style={{ height: 40, width: 200, marginBottom: 32 }} />
+          <div style={{ display: "flex", gap: 40, flexWrap: "wrap" }}>
+            <div className="skeleton" style={{ flex: 2, height: 300 }} />
+            <div className="skeleton" style={{ flex: 1, height: 300 }} />
+          </div>
         </div>
       </div>
     );
@@ -210,75 +213,104 @@ function OrderDetailPage() {
 
   if (!order || !payment) {
     return (
-      <div className="page-container">
-        <div className="empty-state">
-          <div className="empty-state-icon">❌</div>
-          <div className="empty-state-title">Order details not found</div>
-          <button className="btn btn-primary" onClick={() => router.push("/orders")}>
-            Back to My Orders
-          </button>
+      <div className="relative min-h-screen bg-[var(--bg-main)] px-4 py-8 sm:px-8">
+        <div className="mx-auto max-w-7xl">
+          <div className="flex flex-col items-center justify-center gap-3 py-16 text-center">
+            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-[var(--bg-input)] text-[var(--text-muted)]">
+              <span className="text-2xl">❌</span>
+            </div>
+            <div>
+              <div className="text-sm font-semibold text-[var(--text-primary)] mb-1">Order details not found</div>
+              <p className="text-xs text-[var(--text-muted)]">The order you are looking for does not exist or has been removed.</p>
+            </div>
+            <button className="btn btn-primary btn-lg mt-4" onClick={() => router.push("/orders")}>
+              Back to My Orders
+            </button>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <>
-      <div className="page-container animate-fade-in">
+    <div className="relative min-h-screen bg-[var(--bg-main)] px-4 py-8 sm:px-8">
+      {/* Signature: Ambient gradient blobs */}
+      <div className="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
+        <div className="absolute top-0 right-0 h-96 w-96 rounded-full bg-gradient-to-br from-[#FF5A1F]/8 to-transparent blur-3xl transition-opacity duration-500 dark:from-[#FF5A1F]/15" />
+        <div className="absolute bottom-0 left-0 h-96 w-96 rounded-full bg-gradient-to-tr from-[#6366F1]/8 to-transparent blur-3xl transition-opacity duration-500 dark:from-[#6366F1]/15" />
+      </div>
+
+      <div className="mx-auto max-w-7xl">
+        {/* Back Button */}
         <button
-          className="btn btn-ghost btn-sm"
+          className="btn btn-ghost btn-sm mb-6"
           onClick={() => router.push(isManager ? "/orders/manage" : "/orders")}
-          style={{ marginBottom: 24 }}
         >
-          ← Back to {isManager ? "Order Management" : "Orders"}
+          <ArrowLeft size={16} />
+          Back to {isManager ? "Order Management" : "Orders"}
         </button>
 
-        <div style={{ display: "flex", justifyContent: "between", alignItems: "center", marginBottom: 32, gap: 16, flexWrap: "wrap" }}>
+        {/* Page Header */}
+        <div className="mb-8 flex items-center justify-between">
           <div>
-            <h1 className="page-title" style={{ margin: 0 }}>Order #{order.id}</h1>
-            <p style={{ color: "var(--text-muted)", fontSize: 14, margin: "4px 0 0 0" }}>
-              {order.status === "in_progress" 
+            <h1
+              className="text-3xl font-bold text-[var(--text-primary)]"
+              style={{ fontFamily: "'Baloo 2', sans-serif" }}
+            >
+              Order #{order.id}
+            </h1>
+            <p className="mt-1 text-sm text-[var(--text-muted)]">
+              {order.status === "in_progress"
                 ? "Your order is being processed."
                 : "Thank you for shopping with us!"}
             </p>
           </div>
-          <div style={{ display: "flex", gap: 10 }}>
-            <span className={`badge ${getStatusBadgeClass(order.status)}`} style={{ fontSize: 14, padding: "8px 16px" }}>
-              Status: {order.status.toUpperCase()}
-            </span>
-          </div>
+          <span className={`inline-flex items-center rounded-full px-4 py-2 text-sm font-bold uppercase tracking-wider ${getStatusBadgeClass(order.status)}`}>
+            {order.status.toUpperCase()}
+          </span>
         </div>
 
-        <div style={{ display: "flex", gap: 32, flexWrap: "wrap", alignItems: "flex-start" }}>
-          <div style={{ flex: 2, minWidth: 300, display: "flex", flexDirection: "column", gap: 24 }}>
-            <div className="card">
-              <h2 style={{ fontSize: 18, fontWeight: 600, marginBottom: 16, borderBottom: "1px solid var(--border)", paddingBottom: 12 }}>
-                Items Ordered
-              </h2>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Items Ordered */}
+          <div className="lg:col-span-2 rounded-2xl bg-[var(--bg-card)] shadow-[0_1px_2px_rgba(0,0,0,0.04),0_8px_24px_-12px_rgba(0,0,0,0.08)] overflow-hidden">
+            <div className="p-6">
+              <div className="flex items-center gap-2.5 mb-6">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#FFF4EC] text-[#E14E17] transition-all duration-300 dark:bg-[#2A1A10] dark:text-[#FB923C]">
+                  <CreditCard size={18} />
+                </div>
+                <div>
+                  <h2 className="text-base font-bold text-[var(--text-primary)]" style={{ fontFamily: "'Baloo 2', sans-serif" }}>
+                    Items Ordered
+                  </h2>
+                  <p className="text-xs text-[var(--text-muted)]">
+                    {order.items.length} item{order.items.length !== 1 ? "s" : ""}
+                  </p>
+                </div>
+              </div>
+              <div className="h-px bg-gradient-to-r from-[#FF5A1F]/40 via-[var(--border)] to-[#6366F1]/40 mb-6" />
+
               <div style={{ overflowX: "auto" }}>
                 <table>
                   <thead>
                     <tr>
-                      <th>Product</th>
-                      <th style={{ textAlign: "right" }}>Price</th>
-                      <th style={{ textAlign: "center" }}>Quantity</th>
-                      <th style={{ textAlign: "right" }}>Subtotal</th>
+                      <th className="text-left px-4 py-3 text-[10px] font-semibold uppercase tracking-widest text-[var(--text-muted)]">Product</th>
+                      <th className="text-right px-4 py-3 text-[10px] font-semibold uppercase tracking-widest text-[var(--text-muted)]">Price</th>
+                      <th className="text-center px-4 py-3 text-[10px] font-semibold uppercase tracking-widest text-[var(--text-muted)]">Quantity</th>
+                      <th className="text-right px-4 py-3 text-[10px] font-semibold uppercase tracking-widest text-[var(--text-muted)]">Subtotal</th>
                     </tr>
                   </thead>
                   <tbody>
                     {order.items.map((item) => (
-                      <tr key={item.id}>
-                        <td>
+                      <tr key={item.id} className="border-t border-[var(--border)]">
+                        <td className="px-4 py-3">
                           <div>
                             <div style={{ fontWeight: 600, color: "var(--text-primary)" }}>{item.product_name}</div>
                             <div style={{ fontSize: 12, color: "var(--text-muted)" }}>SKU: {item.product_sku}</div>
                           </div>
                         </td>
-                        <td style={{ textAlign: "right" }}>{formatPrice(item.price)}</td>
-                        <td style={{ textAlign: "center" }}>{item.quantity}</td>
-                        <td style={{ textAlign: "right", fontWeight: 600, color: "var(--accent)" }}>
-                          {formatPrice(item.subtotal)}
-                        </td>
+                        <td className="px-4 py-3 text-right text-sm font-semibold text-[var(--text-primary)]">{formatPrice(item.price)}</td>
+                        <td className="px-4 py-3 text-center text-sm text-[var(--text-secondary)]">{item.quantity}</td>
+                        <td className="px-4 py-3 text-right text-sm font-bold text-[var(--accent)]">{formatPrice(item.subtotal)}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -289,14 +321,14 @@ function OrderDetailPage() {
                 <div style={{ width: 240 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8, fontSize: 14 }}>
                     <span style={{ color: "var(--text-secondary)" }}>Subtotal:</span>
-                    <span>{formatPrice(order.total_amount)}</span>
+                    <span className="font-semibold text-[var(--text-primary)]">{formatPrice(order.total_amount)}</span>
                   </div>
                   <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8, fontSize: 14 }}>
                     <span style={{ color: "var(--text-secondary)" }}>Shipping:</span>
-                    <span style={{ color: "var(--success)" }}>Free</span>
+                    <span className="font-semibold text-[var(--success)]">Free</span>
                   </div>
                   <div style={{ display: "flex", justifyContent: "space-between", fontWeight: 700, fontSize: 16, borderTop: "1px solid var(--border)", paddingTop: 8 }}>
-                    <span>Total Amount:</span>
+                    <span className="text-[var(--text-primary)]">Total Amount:</span>
                     <span style={{ color: "var(--accent)" }}>{formatPrice(order.total_amount)}</span>
                   </div>
                 </div>
@@ -304,44 +336,61 @@ function OrderDetailPage() {
             </div>
           </div>
 
-          <div style={{ flex: 1, minWidth: 300, display: "flex", flexDirection: "column", gap: 24 }}>
-            <div className="card">
-              <h2 style={{ fontSize: 18, fontWeight: 600, marginBottom: 16, borderBottom: "1px solid var(--border)", paddingBottom: 12 }}>
-                Payment Information
-              </h2>
+          {/* Payment Information */}
+          <div className="rounded-2xl bg-[var(--bg-card)] shadow-[0_1px_2px_rgba(0,0,0,0.04),0_8px_24px_-12px_rgba(0,0,0,0.08)] overflow-hidden">
+            <div className="p-6">
+              <div className="flex items-center gap-2.5 mb-6">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#EEF2FF] text-[#4F46E5] transition-all duration-300 dark:bg-[#1E1B4B] dark:text-[#A5B4FC]">
+                  <Shield size={18} />
+                </div>
+                <div>
+                  <h2 className="text-base font-bold text-[var(--text-primary)]" style={{ fontFamily: "'Baloo 2', sans-serif" }}>
+                    Payment Info
+                  </h2>
+                  <p className="text-xs text-[var(--text-muted)]">
+                    Method & status
+                  </p>
+                </div>
+              </div>
+              <div className="h-px bg-gradient-to-r from-[#6366F1]/40 via-[var(--border)] to-[#FF5A1F]/40 mb-6" />
 
               <div style={{ display: "flex", flexDirection: "column", gap: 14, marginBottom: 20 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14 }}>
                   <span style={{ color: "var(--text-secondary)" }}>Payment Method:</span>
-                  <span style={{ fontWeight: 600 }}>{payment.method.toUpperCase()}</span>
+                  <span className="font-semibold text-[var(--text-primary)]">{payment.method.toUpperCase()}</span>
                 </div>
                 <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14 }}>
                   <span style={{ color: "var(--text-secondary)" }}>Payment Status:</span>
-                  <span className={`badge ${getStatusBadgeClass(payment.status)}`}>{payment.status}</span>
+                  <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider ${getStatusBadgeClass(payment.status)}`}>
+                    {payment.status}
+                  </span>
                 </div>
                 <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14 }}>
                   <span style={{ color: "var(--text-secondary)" }}>Amount:</span>
-                  <span style={{ fontWeight: 600, color: "var(--accent)" }}>{formatPrice(payment.amount)}</span>
+                  <span className="font-semibold text-[var(--accent)]">{formatPrice(payment.amount)}</span>
                 </div>
                 {payment.paid_at && (payment.status === "completed" || payment.status === "refunded") && (
                   <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14 }}>
                     <span style={{ color: "var(--text-secondary)" }}>Paid At:</span>
-                    <span>{new Date(payment.paid_at).toLocaleString()}</span>
+                    <span className="text-[var(--text-primary)]">{new Date(payment.paid_at).toLocaleString()}</span>
                   </div>
                 )}
                 {payment.refund_at && payment.status === "refunded" && (
                   <div style={{ display: "flex", justifyContent: "space-between", fontSize: 14 }}>
                     <span style={{ color: "var(--text-secondary)" }}>Refunded At:</span>
-                    <span>{new Date(payment.refund_at).toLocaleString()}</span>
+                    <span className="text-[var(--text-primary)]">{new Date(payment.refund_at).toLocaleString()}</span>
                   </div>
                 )}
               </div>
 
               {/* Countdown timer - only for order owner */}
               {isOrderOwner && order.status === "pending" && payment.status === "pending" && timeLeft && (
-                <div style={{ background: "rgba(245, 158, 11, 0.1)", border: "1px solid rgba(245, 158, 11, 0.2)", borderRadius: 12, padding: 16, textAlign: "center", marginBottom: 20 }}>
-                  <div style={{ fontSize: 13, color: "var(--warning)", marginBottom: 4 }}>⏰ Payment expires in</div>
-                  <div style={{ fontSize: 24, fontWeight: 800, color: "#f59e0b" }}>{timeLeft}</div>
+                <div style={{ background: "var(--warning-bg)", border: "1px solid rgba(245, 158, 11, 0.2)", borderRadius: 12, padding: 16, textAlign: "center", marginBottom: 20 }}>
+                  <div style={{ fontSize: 13, color: "var(--warning)", marginBottom: 4, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
+                    <Clock size={14} />
+                    Payment expires in
+                  </div>
+                  <div style={{ fontSize: 24, fontWeight: 800, color: "var(--warning)", letterSpacing: "-0.02em" }}>{timeLeft}</div>
                   <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 4 }}>Please complete payment before timer reaches 0.</div>
                 </div>
               )}
@@ -352,7 +401,7 @@ function OrderDetailPage() {
                   <button className="btn btn-success btn-lg" style={{ width: "100%" }} onClick={handlePay} disabled={actionLoading}>
                     {actionLoading ? "Processing Payment..." : "Pay Now"}
                   </button>
-                  <button className="btn btn-ghost" style={{ width: "100%", color: "var(--danger)", borderColor: "rgba(239, 68, 68, 0.2)" }} onClick={handleCancel} disabled={actionLoading}>
+                  <button className="btn btn-ghost" style={{ width: "100%", color: "var(--danger)", borderColor: "rgba(244, 63, 94, 0.2)" }} onClick={handleCancel} disabled={actionLoading}>
                     {actionLoading ? "Processing..." : "Cancel Order"}
                   </button>
                 </div>
@@ -381,22 +430,22 @@ function OrderDetailPage() {
 
               {/* Status alert boxes */}
               {payment.status === "completed" && order.status === "in_progress" && (
-                <div style={{ background: "rgba(96, 165, 250, 0.1)", border: "1px solid rgba(96, 165, 250, 0.2)", borderRadius: 12, padding: 16, color: "#60a5fa", fontSize: 14, display: "flex", alignItems: "center", gap: 10 }}>
-                  <span>⏳</span>
+                <div style={{ background: "var(--info-bg)", border: "1px solid rgba(59, 130, 246, 0.2)", borderRadius: 12, padding: 16, color: "var(--info)", fontSize: 14, display: "flex", alignItems: "center", gap: 10, marginTop: 16 }}>
+                  <span><Clock size={18} /></span>
                   <span>Payment successful! Your order is being processed. Please wait for manager confirmation.</span>
                 </div>
               )}
 
               {order.status === "completed" && (
-                <div style={{ background: "rgba(16, 185, 129, 0.1)", border: "1px solid rgba(16, 185, 129, 0.2)", borderRadius: 12, padding: 16, color: "#34d399", fontSize: 14, display: "flex", alignItems: "center", gap: 10 }}>
-                  <span>✅</span>
+                <div style={{ background: "var(--success-bg)", border: "1px solid rgba(16, 185, 129, 0.2)", borderRadius: 12, padding: 16, color: "var(--success)", fontSize: 14, display: "flex", alignItems: "center", gap: 10, marginTop: 16 }}>
+                  <span><CheckCircle2 size={18} /></span>
                   <span>This order has been completed.</span>
                 </div>
               )}
 
               {(order.status === "cancelled" || payment.status === "failed" || payment.status === "refunded") && (
-                <div style={{ background: "rgba(239, 68, 68, 0.1)", border: "1px solid rgba(239, 68, 68, 0.2)", borderRadius: 12, padding: 16, color: "#f87171", fontSize: 14, display: "flex", alignItems: "center", gap: 10 }}>
-                  <span>❌</span>
+                <div style={{ background: "var(--danger-bg)", border: "1px solid rgba(239, 68, 68, 0.2)", borderRadius: 12, padding: 16, color: "var(--danger)", fontSize: 14, display: "flex", alignItems: "center", gap: 10, marginTop: 16 }}>
+                  <span><XCircle size={18} /></span>
                   <span>This order has been cancelled or payment failed.</span>
                 </div>
               )}
@@ -406,7 +455,7 @@ function OrderDetailPage() {
       </div>
 
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
-    </>
+    </div>
   );
 }
 

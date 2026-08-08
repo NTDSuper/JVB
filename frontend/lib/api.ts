@@ -2,7 +2,7 @@ import axios from "axios";
 import { logout, getToken, setToken } from "@/lib/auth";
 
 const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL + "/api",
+  baseURL: "/api",
   withCredentials: true,
   headers: {
     "Content-Type": "application/json",
@@ -11,7 +11,7 @@ const api = axios.create({
 
 
 const refreshApi = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL + "/api",
+  baseURL:"/api",
   withCredentials: true,
 });
 

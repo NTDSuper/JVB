@@ -15,6 +15,21 @@ const SUGGESTED_QUESTIONS = [
   "Show daily order count for the last 30 days",
 ];
 
+function formatDate(iso: string) {
+  try {
+    const d = new Date(iso);
+    return d.toLocaleDateString(undefined, {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  } catch {
+    return iso;
+  }
+}
+
 interface QueryOption {
   id: string;
   label: string;
@@ -80,7 +95,7 @@ interface HistoryItem {
   created_at: string;
 }
 
-export function AiDashboardPage() {
+function AiDashboardPage() {
   const [question, setQuestion] = useState("");
   const [widgets, setWidgets] = useState<AiWidgetData[]>([]);
   const [totalWidgets, setTotalWidgets] = useState<number | null>(null);
@@ -103,6 +118,11 @@ export function AiDashboardPage() {
   const cancelledRef = useRef(false);
   const resumeTimerRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Refs to track latest values for saving history on stream completion
+  const widgetsRef = useRef<AiWidgetData[]>([]);
+  const tasksRef = useRef<TaskInfo[]>([]);
+  const questionRef = useRef("");
+
   // Analysis state
   const [analysis, setAnalysis] = useState<QueryAnalysisData | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -110,8 +130,11 @@ export function AiDashboardPage() {
   const [selectedOptions, setSelectedOptions] = useState<Set<string>>(new Set());
   const [enhancedQuestion, setEnhancedQuestion] = useState("");
 
-  // History panel state
-  const [showHistory, setShowHistory] = useState(false);
+  // Tab state
+  const [activeTab, setActiveTab] = useState<"ask" | "history">("ask");
+  const [viewingHistoryItem, setViewingHistoryItem] = useState<HistoryItem | null>(null);
+  const [showHistoryList, setShowHistoryList] = useState(true);
+  const [savedToHistory, setSavedToHistory] = useState(false);
 
   const skeletonCount = totalWidgets ? Math.min(totalWidgets - widgets.length, totalWidgets) : 0;
 
@@ -230,6 +253,37 @@ export function AiDashboardPage() {
     }
   }, [widgets, tasks, totalWidgets, question, historyId]);
 
+  // Keep refs in sync for history saving
+  useEffect(() => { widgetsRef.current = widgets; }, [widgets]);
+  useEffect(() => { tasksRef.current = tasks; }, [tasks]);
+  useEffect(() => { questionRef.current = question; }, [question]);
+
+  // Save completed widgets to localStorage history
+  const saveToLocalHistory = useCallback(() => {
+    const finalWidgets = widgetsRef.current.filter(Boolean);
+    if (finalWidgets.length === 0) return;
+    const item: HistoryItem = {
+      _id: `local_${Date.now()}`,
+      session_id: sessionId || "",
+      user_id: 0,
+      question: questionRef.current,
+      tasks: tasksRef.current,
+      widgets: finalWidgets,
+      widget_count: finalWidgets.length,
+      task_count: tasksRef.current.length,
+      created_at: new Date().toISOString(),
+    };
+    try {
+      const raw = localStorage.getItem("ai_dashboard_history");
+      const existing = raw ? JSON.parse(raw) : [];
+      const next = [item, ...existing].slice(0, 50);
+      localStorage.setItem("ai_dashboard_history", JSON.stringify(next));
+      setSavedToHistory(true);
+    } catch (e) {
+      console.error("Failed to save history to localStorage", e);
+    }
+  }, [sessionId]);
+
   /**
    * Shared SSE stream reader — handles plan/task/widget/error/done events.
    * @param response  The axios streaming response
@@ -284,6 +338,8 @@ export function AiDashboardPage() {
                 updated[event.index] = event.widget;
                 return updated;
               });
+              // Update ref immediately so history saving has latest widgets
+              widgetsRef.current[event.index] = event.widget;
               if (event.index === event.total - 1) setCurrentTaskIndex(null);
               break;
             case "done":
@@ -291,6 +347,8 @@ export function AiDashboardPage() {
               setCurrentTaskIndex(null);
               if (event.session_id) setSessionId(event.session_id);
               if (event.history_id) setHistoryId(event.history_id);
+              // Save completed widgets to localStorage history
+              saveToLocalHistory();
               break;
           }
         } catch {
@@ -468,6 +526,7 @@ export function AiDashboardPage() {
     setHistoryId(null);
     setActiveSession(null);
     setWasCancelled(false);
+    setSavedToHistory(false);
   }, []);
 
   const startStream = useCallback(async (q: string) => {
@@ -486,6 +545,7 @@ export function AiDashboardPage() {
     setSessionId(null);
     setHistoryId(null);
     setWasCancelled(false);
+    setSavedToHistory(false);
     setIsStreaming(true);
 
     const controller = new AbortController();
@@ -608,45 +668,138 @@ export function AiDashboardPage() {
   }, [analysis, question, startStream]);
 
   const handleViewHistory = useCallback((item: HistoryItem) => {
-    // Load history item — includes question, tasks (planner), and widgets
-    setWidgets(item.widgets);
-    setTasks(item.tasks || []);
-    setTotalWidgets(item.widget_count || item.widgets.length);
-    setQuestion(item.question);
-    setHistoryId(item._id);
-    setShowHistory(false);
+    // Show selected history item's widgets and collapse the list
+    setViewingHistoryItem(item);
+    setShowHistoryList(false);
+  }, []);
+
+  const handleBackToHistoryList = useCallback(() => {
+    setShowHistoryList(true);
+    setViewingHistoryItem(null);
   }, []);
 
   const isPending = isStreaming || (totalWidgets !== null && widgets.length < totalWidgets);
 
   return (
-    <>
-      <div className="page-container">
-        <div className="section-header">
-          <div>
-            <h1 className="page-title">AI Dashboard</h1>
-            <p className="page-subtitle" style={{ marginBottom: 0 }}>
-              Ask questions about your business data in natural language
-            </p>
-          </div>
-          <div style={{ display: "flex", gap: 8 }}>
-            <button
-              className="btn btn-ghost"
-              onClick={() => setShowHistory(!showHistory)}
-              disabled={isStreaming || isAnalyzing}
-            >
-              {showHistory ? "Close History" : "History"}
-            </button>
-          </div>
+    <div className="relative min-h-screen bg-[var(--bg-main)] px-4 py-8 sm:px-8">
+      {/* Signature: Ambient gradient blobs */}
+      <div className="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
+        <div className="absolute top-0 right-0 h-96 w-96 rounded-full bg-gradient-to-br from-[#FF5A1F]/8 to-transparent blur-3xl transition-opacity duration-500 dark:from-[#FF5A1F]/15" />
+        <div className="absolute bottom-0 left-0 h-96 w-96 rounded-full bg-gradient-to-tr from-[#6366F1]/8 to-transparent blur-3xl transition-opacity duration-500 dark:from-[#6366F1]/15" />
+      </div>
+
+      <div className="mx-auto max-w-5xl">
+        {/* ── Page Header ── */}
+        <div className="mb-8">
+          <h1
+            className="text-3xl font-bold text-[var(--text-primary)]"
+            style={{ fontFamily: "'Baloo 2', sans-serif" }}
+          >
+            AI Dashboard
+          </h1>
+          <p className="mt-1 text-sm text-[var(--text-muted)]">
+            Ask questions about your business data in natural language
+          </p>
         </div>
 
-        {/* History Panel */}
-        {showHistory && (
+        {/* ── Tab Bar ── */}
+        <div
+          style={{
+            display: "flex",
+            gap: 4,
+            marginBottom: 24,
+            padding: 4,
+            borderRadius: 12,
+            background: "var(--bg-progress)",
+            border: "1px solid var(--border-light)",
+            width: "fit-content",
+          }}
+        >
+          <button
+            onClick={() => setActiveTab("ask")}
+            style={{
+              padding: "10px 24px",
+              borderRadius: 8,
+              fontSize: 14,
+              fontWeight: 600,
+              border: "none",
+              cursor: "pointer",
+              background: activeTab === "ask" ? "var(--primary)" : "transparent",
+              color: activeTab === "ask" ? "#fff" : "var(--text-muted)",
+              transition: "all 0.2s ease",
+            }}
+          >
+            Question
+          </button>
+          <button
+            onClick={() => setActiveTab("history")}
+            style={{
+              padding: "10px 24px",
+              borderRadius: 8,
+              fontSize: 14,
+              fontWeight: 600,
+              border: "none",
+              cursor: "pointer",
+              background: activeTab === "history" ? "var(--primary)" : "transparent",
+              color: activeTab === "history" ? "#fff" : "var(--text-muted)",
+              transition: "all 0.2s ease",
+            }}
+          >
+            History
+          </button>
+        </div>
+
+        {/* History Tab */}
+        {activeTab === "history" && (
           <div style={{ marginBottom: 18 }}>
-            <HistoryPanel onSelect={handleViewHistory} />
+            {/* Back to list button when viewing a detail */}
+            {!showHistoryList && viewingHistoryItem && (
+              <div style={{ marginBottom: 12 }}>
+                <button
+                  className="btn btn-ghost"
+                  onClick={handleBackToHistoryList}
+                  style={{ fontSize: 13, padding: "8px 16px" }}
+                >
+                  ← Back to history list
+                </button>
+              </div>
+            )}
+
+            {/* History list — collapsed when viewing an item */}
+            {showHistoryList && (
+              <HistoryPanel onSelect={handleViewHistory} selectedId={viewingHistoryItem?._id} />
+            )}
+
+            {/* Detail view of selected history item */}
+            {viewingHistoryItem && (
+              <div>
+                <div
+                  className="card"
+                  style={{
+                    padding: "14px 20px",
+                    marginBottom: 12,
+                    borderColor: "rgba(var(--primary-rgb), 0.25)",
+                  }}
+                >
+                  <div style={{ fontSize: 14, fontWeight: 600, color: "var(--text-primary)", marginBottom: 4 }}>
+                    {viewingHistoryItem.question}
+                  </div>
+                  <div style={{ fontSize: 12, color: "var(--text-muted)" }}>
+                    {viewingHistoryItem.widget_count} widget{viewingHistoryItem.widget_count !== 1 ? "s" : ""} • {formatDate(viewingHistoryItem.created_at)}
+                  </div>
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                  {viewingHistoryItem.widgets.map((widget, i) => (
+                    <AiDashboardWidget key={i} widget={widget} />
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
 
+        {activeTab === "ask" && (
+          <>
         {/* Active Session Recovery Banner */}
         {activeSession && !isStreaming && (
           <div
@@ -1230,7 +1383,7 @@ export function AiDashboardPage() {
           <div style={{ textAlign: "center", marginTop: 8, marginBottom: 24 }}>
                 <span className="muted" style={{ fontSize: 13 }}>
                   {widgets.length} widget{widgets.length !== 1 ? "s" : ""} generated
-                  {historyId && (
+                  {(historyId || savedToHistory) && (
                     <span style={{ marginLeft: 8, color: "var(--primary)" }}>
                   ✓ Saved to history
                 </span>
@@ -1238,8 +1391,10 @@ export function AiDashboardPage() {
             </span>
           </div>
         )}
+          </>
+        )}
       </div>
-    </>
+    </div>
   );
 }
 

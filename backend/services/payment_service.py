@@ -83,9 +83,11 @@ class PaymentService:
 
         if order.status == "completed":
             raise HTTPException(status_code=400, detail="Order already completed")
-        
+
         if order.status == "in_progress":
-            raise HTTPException(status_code=400, detail="Order is already being processed")
+            raise HTTPException(
+                status_code=400, detail="Order is already being processed"
+            )
 
         # Reset order ve pending
         if order.status == "cancelled":

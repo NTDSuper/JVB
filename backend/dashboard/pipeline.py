@@ -221,14 +221,15 @@ def dashboard_pipeline_stream(
             logger.warning(f"Failed to recreate Redis session: {e}")
 
     # ── Emit plan event ──────────────────────────────────────────────────────
-    yield f"data: {json.dumps({
-        'type': 'plan',
-        'total': total,
-        'tasks': task_details,
-        'session_id': active_session_id or '',
-        'resume': start_index > 0,
-        'start_index': start_index,
-    })}\n\n"
+    plan_event = json.dumps({
+        "type": "plan",
+        "total": total,
+        "tasks": task_details,
+        "session_id": active_session_id or "",
+        "resume": start_index > 0,
+        "start_index": start_index,
+    })
+    yield f"data: {plan_event}\n\n"
 
     # ── collected_widgets starts with already-completed widgets ───────────────
     # so finalize_session() can persist the full result set.
@@ -245,14 +246,15 @@ def dashboard_pipeline_stream(
             logger.info(f"{'=' * 50}")
 
             # Notify frontend which task is running
-            yield f"data: {json.dumps({
-                'type': 'task',
-                'index': i,
-                'total': total,
-                'question': task.question,
-                'display': task.display,
-                'chart_type': task.chart_type,
-            })}\n\n"
+            task_event = json.dumps({
+                "type": "task",
+                "index": i,
+                "total": total,
+                "question": task.question,
+                "display": task.display,
+                "chart_type": task.chart_type,
+            })
+            yield f"data: {task_event}\n\n"
 
             try:
                 sql_output = run_sql_agent(sql_agent, task)
@@ -272,13 +274,14 @@ def dashboard_pipeline_stream(
                     except Exception as e:
                         logger.warning(f"Failed to update task progress in Redis: {e}")
 
-                yield f"data: {json.dumps({
-                    'type': 'widget',
-                    'index': i,
-                    'total': total,
-                    'widget': widget,
-                    'session_id': active_session_id or '',
-                })}\n\n"
+                widget_event = json.dumps({
+                    "type": "widget",
+                    "index": i,
+                    "total": total,
+                    "widget": widget,
+                    "session_id": active_session_id or "",
+                })
+                yield f"data: {widget_event}\n\n"
 
             except Exception as e:
                 logger.exception(f"Task {i+1} failed: {e}")
@@ -298,13 +301,14 @@ def dashboard_pipeline_stream(
                     except Exception as e:
                         logger.warning(f"Failed to update error progress in Redis: {e}")
 
-                yield f"data: {json.dumps({
-                    'type': 'error',
-                    'index': i,
-                    'total': total,
-                    'widget': error_widget,
-                    'session_id': active_session_id or '',
-                })}\n\n"
+                error_event = json.dumps({
+                    "type": "error",
+                    "index": i,
+                    "total": total,
+                    "widget": error_widget,
+                    "session_id": active_session_id or "",
+                })
+                yield f"data: {error_event}\n\n"
 
         # ── Finalize: save ALL widgets to MongoDB, then delete Redis session ──────
         history_id = None
@@ -322,11 +326,12 @@ def dashboard_pipeline_stream(
                 except Exception as e:
                     logger.warning(f"Failed to finalize session to MongoDB: {e}")
 
-        yield f"data: {json.dumps({
-            'type': 'done',
-            'session_id': active_session_id or '',
-            'history_id': history_id or '',
-        })}\n\n"
+        done_event = json.dumps({
+            "type": "done",
+            "session_id": active_session_id or "",
+            "history_id": history_id or "",
+        })
+        yield f"data: {done_event}\n\n"
 
     finally:
         # Guaranteed cleanup block: if the generator exits early (e.g., client disconnects),

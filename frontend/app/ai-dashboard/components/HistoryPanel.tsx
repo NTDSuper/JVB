@@ -24,9 +24,10 @@ interface HistoryItem {
 
 interface HistoryPanelProps {
   onSelect: (item: HistoryItem) => void;
+  selectedId?: string | null;
 }
 
-export default function HistoryPanel({ onSelect }: HistoryPanelProps) {
+export default function HistoryPanel({ onSelect, selectedId }: HistoryPanelProps) {
   const [items, setItems] = useState<HistoryItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -142,12 +143,17 @@ export default function HistoryPanel({ onSelect }: HistoryPanelProps) {
                 display: "flex",
                 alignItems: "flex-start",
                 gap: 12,
+                background: selectedId === item._id ? "rgba(var(--primary-rgb), 0.06)" : "transparent",
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.background = "var(--bg-hover)";
+                e.currentTarget.style.background = selectedId === item._id
+                  ? "rgba(var(--primary-rgb), 0.06)"
+                  : "var(--bg-hover)";
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.background = "transparent";
+                e.currentTarget.style.background = selectedId === item._id
+                  ? "rgba(var(--primary-rgb), 0.06)"
+                  : "transparent";
               }}
             >
               <span style={{ fontSize: 16, flexShrink: 0, marginTop: 2 }}>💬</span>
